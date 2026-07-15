@@ -5,6 +5,7 @@ import {
   computeParticipantSubtotalCents,
   computeSplit,
   reconcileRounding,
+  roundShareCents,
   type SplitCharges,
   type SplitClaim,
   type SplitItem,
@@ -354,5 +355,26 @@ describe("computeAllocations — chargeAllocationMode", () => {
     expect(total).toBe(4400);
     // sam pays only their item subtotal, no charge share.
     expect(result.allocations.find((a) => a.participantId === "sam")?.totalCents).toBe(1000);
+  });
+});
+
+describe("roundShareCents", () => {
+  it("leaves the amount unchanged when rounding is off (1)", () => {
+    expect(roundShareCents(1234, 1)).toBe(1234);
+  });
+
+  it("rounds to the nearest peso", () => {
+    expect(roundShareCents(1234, 100)).toBe(1200);
+    expect(roundShareCents(1250, 100)).toBe(1300);
+  });
+
+  it("rounds to the nearest ₱5", () => {
+    expect(roundShareCents(1230, 500)).toBe(1000);
+    expect(roundShareCents(1260, 500)).toBe(1500);
+  });
+
+  it("rounds to the nearest ₱10", () => {
+    expect(roundShareCents(1449, 1000)).toBe(1000);
+    expect(roundShareCents(1550, 1000)).toBe(2000);
   });
 });

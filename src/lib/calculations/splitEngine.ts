@@ -191,6 +191,17 @@ export function computeSplit(
   return { allocations, unclaimedItemIds, unclaimedCents };
 }
 
+// Rounds a single participant's share to the nearest rounding unit (in cents —
+// 1 means off/exact, 100/500/1000 mean nearest ₱1/₱5/₱10). This is a display/
+// request-amount convenience for cash payments, not a ledger operation: each
+// participant's own number is rounded independently, with no cross-participant
+// reconciliation, since nothing here needs to keep summing to the receipt's
+// exact total the way reconcileRounding's payer-absorption does.
+export function roundShareCents(cents: number, roundingCents: number): number {
+  if (roundingCents <= 1) return cents;
+  return Math.round(cents / roundingCents) * roundingCents;
+}
+
 export interface EvenSplitAllocation {
   participantId: string;
   totalCents: number;

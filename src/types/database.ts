@@ -15,6 +15,7 @@ export interface Database {
           currency: string;
           split_mode: "items" | "even";
           charge_allocation_mode: "proportional" | "equal";
+          rounding_preference_cents: number;
           subtotal_cents: number;
           tax_cents: number;
           service_charge_cents: number;

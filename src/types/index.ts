@@ -3,6 +3,7 @@ export type ItemSource = "ocr" | "manual";
 export type SplitMode = "items" | "even";
 export type PaymentStatus = "unpaid" | "submitted" | "confirmed";
 export type ChargeAllocationMode = "proportional" | "equal";
+export type RoundingPreferenceCents = 1 | 100 | 500 | 1000;
 
 export interface Session {
   id: string;
@@ -17,6 +18,7 @@ export interface Session {
   currency: string;
   splitMode: SplitMode;
   chargeAllocationMode: ChargeAllocationMode;
+  roundingPreferenceCents: RoundingPreferenceCents;
   subtotalCents: number;
   taxCents: number;
   serviceChargeCents: number;

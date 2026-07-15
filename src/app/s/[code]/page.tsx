@@ -2,9 +2,11 @@ import { notFound, redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getDeviceToken } from "@/lib/session/deviceToken";
 import { mapItemRow, mapItemClaimRow, mapParticipantRow } from "@/lib/mappers";
-import { computeEvenSplit, computeSplit } from "@/lib/calculations/splitEngine";
+import { computeEvenSplit, computeSplit, roundShareCents } from "@/lib/calculations/splitEngine";
 import { AppHeader } from "@/components/AppHeader";
+import { AssignItemsPanel } from "@/components/AssignItemsPanel";
 import { BillTitleEditor } from "@/components/BillTitleEditor";
+import { CurrencySelector } from "@/components/CurrencySelector";
 import { ItemEditor } from "@/components/ItemEditor";
 import { ItemClaimList, type ClaimWithName } from "@/components/ItemClaimList";
 import { GCashNumberCard } from "@/components/GCashNumberCard";
@@ -97,7 +99,10 @@ export default async function SessionPage({
     const nonPayerAllocations = participants
       .filter((p) => !p.isPayer)
       .map((p) => ({
-        totalCents: payerAllocationById.get(p.id)?.totalCents ?? 0,
+        totalCents: roundShareCents(
+          payerAllocationById.get(p.id)?.totalCents ?? 0,
+          session.rounding_preference_cents,
+        ),
         paymentStatus: p.paymentStatus,
       }));
     const { status: recentBillStatus, outstandingCents } = computePayerRecentBillStatus(
@@ -164,6 +169,11 @@ export default async function SessionPage({
         </div>
 
         <div className="mt-4 flex flex-col gap-3">
+          <CurrencySelector
+            sessionCode={session.code}
+            initialCurrency={session.currency}
+            disabled={isLocked}
+          />
           <GCashNumberCard
             sessionCode={session.code}
             initialGcashNumber={session.gcash_number}
@@ -190,6 +200,7 @@ export default async function SessionPage({
               currency={session.currency}
               splitMode={session.split_mode}
               chargeAllocationMode={session.charge_allocation_mode}
+              roundingPreferenceCents={session.rounding_preference_cents}
               isBillLocked={isLocked}
             />
           </div>
@@ -205,6 +216,24 @@ export default async function SessionPage({
             />
           </div>
         ) : null}
+
+        {session.split_mode === "items" && items.length > 0 && participants.length > 0 ? (
+          <div className="mt-8">
+            <h2 className="mb-3 text-sm font-medium text-muted">Assign items</h2>
+            <AssignItemsPanel
+              key={JSON.stringify(items) + JSON.stringify(claimsWithNames)}
+              sessionCode={session.code}
+              items={items}
+              initialClaims={claimsWithNames}
+              participants={participants.map((p) => ({
+                id: p.id,
+                name: p.isPayer ? "You" : p.name,
+              }))}
+              currency={session.currency}
+              isBillLocked={isLocked}
+            />
+          </div>
+        ) : null}
       </main>
     );
   }
@@ -213,7 +242,7 @@ export default async function SessionPage({
     redirect(`/s/${session.code}/join`);
   }
 
-  const myShareCents =
+  const myShareCents = roundShareCents(
     session.split_mode === "even"
       ? (computeEvenSplit(charges.grandTotalCents, allParticipants).find(
           (a) => a.participantId === currentParticipant.id,
@@ -225,7 +254,9 @@ export default async function SessionPage({
           charges,
           session.charge_allocation_mode,
         ).allocations.find((a) => a.participantId === currentParticipant.id)?.totalCents ??
-        0);
+        0),
+    session.rounding_preference_cents,
+  );
 
   const { status: myRecentBillStatus, outstandingCents: myOutstandingCents } =
     computeParticipantRecentBillStatus(currentParticipant.paymentStatus, myShareCents);

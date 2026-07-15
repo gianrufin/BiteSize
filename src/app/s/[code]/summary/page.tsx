@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getDeviceToken } from "@/lib/session/deviceToken";
 import { mapItemRow, mapItemClaimRow, mapParticipantRow } from "@/lib/mappers";
-import { computeEvenSplit, computeSplit } from "@/lib/calculations/splitEngine";
+import { computeEvenSplit, computeSplit, roundShareCents } from "@/lib/calculations/splitEngine";
 import { formatCents } from "@/lib/format";
 import { AppHeader } from "@/components/AppHeader";
 import { SummaryView } from "@/components/SummaryView";
@@ -76,6 +76,7 @@ export default async function SummaryPage({
               currency: session.currency,
               splitMode: session.split_mode,
               chargeAllocationMode: session.charge_allocation_mode,
+              roundingPreferenceCents: session.rounding_preference_cents as 1 | 100 | 500 | 1000,
               subtotalCents: session.subtotal_cents,
               taxCents: session.tax_cents,
               serviceChargeCents: session.service_charge_cents,
@@ -123,7 +124,7 @@ export default async function SummaryPage({
     grandTotalCents: session.grand_total_cents,
   };
 
-  const myShareCents =
+  const myShareCents = roundShareCents(
     session.split_mode === "even"
       ? (computeEvenSplit(charges.grandTotalCents, allParticipants).find(
           (a) => a.participantId === currentParticipant.id,
@@ -135,7 +136,9 @@ export default async function SummaryPage({
           charges,
           session.charge_allocation_mode,
         ).allocations.find((a) => a.participantId === currentParticipant.id)?.totalCents ??
-        0);
+        0),
+    session.rounding_preference_cents,
+  );
 
   const { status: myRecentBillStatus, outstandingCents: myOutstandingCents } =
     computeParticipantRecentBillStatus(currentParticipant.paymentStatus, myShareCents);

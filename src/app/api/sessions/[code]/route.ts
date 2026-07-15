@@ -53,6 +53,17 @@ export async function PATCH(
     update.venue_name = venueName || null;
   }
 
+  if ("currency" in body) {
+    const currency = typeof body.currency === "string" ? body.currency.trim().toUpperCase() : "";
+    if (!/^[A-Z]{3}$/.test(currency)) {
+      return NextResponse.json(
+        { error: "currency must be a 3-letter ISO code, e.g. PHP" },
+        { status: 400 },
+      );
+    }
+    update.currency = currency;
+  }
+
   if ("gcashNumber" in body) {
     const rawGcashNumber =
       typeof body.gcashNumber === "string" ? body.gcashNumber.trim() : "";
@@ -75,6 +86,17 @@ export async function PATCH(
       );
     }
     update.split_mode = body.splitMode;
+  }
+
+  if ("roundingPreferenceCents" in body) {
+    const rounding = Number(body.roundingPreferenceCents);
+    if (![1, 100, 500, 1000].includes(rounding)) {
+      return NextResponse.json(
+        { error: "roundingPreferenceCents must be 1, 100, 500, or 1000" },
+        { status: 400 },
+      );
+    }
+    update.rounding_preference_cents = rounding;
   }
 
   if ("chargeAllocationMode" in body) {

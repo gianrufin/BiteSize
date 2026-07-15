@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatCents } from "@/lib/format";
-import { computeEvenSplit, computeSplit } from "@/lib/calculations/splitEngine";
+import { computeEvenSplit, computeSplit, roundShareCents } from "@/lib/calculations/splitEngine";
 import { buildSummaryText } from "@/lib/session/summaryText";
 import { ChargesEditor } from "@/components/ChargesEditor";
+import { Confetti } from "@/components/Confetti";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { ExportSummaryImage } from "@/components/ExportSummaryImage";
+import { RoundingPreferenceSelector } from "@/components/RoundingPreferenceSelector";
 import type { Item, PaymentStatus, Session } from "@/types";
 
 export interface SummaryParticipant {
@@ -38,6 +40,7 @@ export function SummaryView({
     | "currency"
     | "splitMode"
     | "chargeAllocationMode"
+    | "roundingPreferenceCents"
     | "subtotalCents"
     | "taxCents"
     | "serviceChargeCents"
@@ -155,12 +158,17 @@ export function SummaryView({
     ]),
   );
 
+  function getShareCents(participantId: string): number {
+    return roundShareCents(
+      allocationByParticipantId.get(participantId)?.totalCents ?? 0,
+      session.roundingPreferenceCents,
+    );
+  }
+
   const summaryParticipants = participants.map((participant) => ({
     name: participant.name,
     isPayer: participant.isPayer,
-    amountCents: participant.isPayer
-      ? session.grandTotalCents
-      : (allocationByParticipantId.get(participant.id)?.totalCents ?? 0),
+    amountCents: participant.isPayer ? session.grandTotalCents : getShareCents(participant.id),
   }));
 
   const summaryText = buildSummaryText(
@@ -178,18 +186,41 @@ export function SummaryView({
 
   const nonPayerParticipants = participants.filter((p) => !p.isPayer);
   const totalOwedCents = nonPayerParticipants.reduce(
-    (sum, p) => sum + (allocationByParticipantId.get(p.id)?.totalCents ?? 0),
+    (sum, p) => sum + getShareCents(p.id),
     0,
   );
   const collectedCents = nonPayerParticipants
     .filter((p) => getPaymentStatus(p) === "confirmed")
-    .reduce((sum, p) => sum + (allocationByParticipantId.get(p.id)?.totalCents ?? 0), 0);
+    .reduce((sum, p) => sum + getShareCents(p.id), 0);
   const pendingCount = nonPayerParticipants.filter(
     (p) => getPaymentStatus(p) === "submitted",
   ).length;
 
+  const isFullySettled =
+    nonPayerParticipants.length > 0 &&
+    totalOwedCents > 0 &&
+    collectedCents === totalOwedCents;
+
+  const wasFullySettled = useRef(isFullySettled);
+  const [celebrationKey, setCelebrationKey] = useState(0);
+  useEffect(() => {
+    if (isFullySettled && !wasFullySettled.current) {
+      setCelebrationKey((prev) => prev + 1);
+    }
+    wasFullySettled.current = isFullySettled;
+  }, [isFullySettled]);
+
   return (
     <div className="flex flex-col gap-6">
+      <Confetti celebrationKey={celebrationKey} />
+      {isFullySettled ? (
+        <div className="card p-4 text-center">
+          <p className="text-lg font-medium text-text">🎉 All settled up!</p>
+          <p className="mt-1 text-sm text-muted">
+            Everyone has paid — nothing left to collect.
+          </p>
+        </div>
+      ) : null}
       <div className="card p-5 text-center">
         {isLocked ? (
           <p className="mb-1 text-xs font-medium text-amber">🔒 Locked</p>
@@ -261,6 +292,14 @@ export function SummaryView({
         />
       )}
 
+      {!isLocked ? (
+        <RoundingPreferenceSelector
+          sessionCode={sessionCode}
+          initialValue={session.roundingPreferenceCents}
+          onSessionUpdate={setSession}
+        />
+      ) : null}
+
       <div>
         <h2 className="mb-3 text-sm font-medium text-muted">
           Participants ({participants.length})
@@ -270,7 +309,7 @@ export function SummaryView({
             const isPayer = participant.isPayer;
             const amountCents = isPayer
               ? session.grandTotalCents
-              : (allocationByParticipantId.get(participant.id)?.totalCents ?? 0);
+              : getShareCents(participant.id);
 
             const paymentStatus = getPaymentStatus(participant);
 

@@ -20,6 +20,7 @@ export function mapSessionRow(row: SessionRow): Session {
     currency: row.currency,
     splitMode: row.split_mode,
     chargeAllocationMode: row.charge_allocation_mode,
+    roundingPreferenceCents: row.rounding_preference_cents as Session["roundingPreferenceCents"],
     subtotalCents: row.subtotal_cents,
     taxCents: row.tax_cents,
     serviceChargeCents: row.service_charge_cents,

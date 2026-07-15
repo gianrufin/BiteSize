@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatCents } from "@/lib/format";
-import { computeEvenSplit, computeSplit } from "@/lib/calculations/splitEngine";
+import { computeEvenSplit, computeSplit, roundShareCents } from "@/lib/calculations/splitEngine";
 import type { ChargeAllocationMode, Item, SplitMode } from "@/types";
 
 export interface ClaimWithName {
@@ -29,6 +29,7 @@ export function ItemClaimList({
   currency,
   splitMode = "items",
   chargeAllocationMode = "proportional",
+  roundingPreferenceCents = 1,
   isBillLocked = false,
 }: {
   sessionCode: string;
@@ -40,6 +41,7 @@ export function ItemClaimList({
   currency: string;
   splitMode?: SplitMode;
   chargeAllocationMode?: ChargeAllocationMode;
+  roundingPreferenceCents?: number;
   isBillLocked?: boolean;
 }) {
   const [claims, setClaims] = useState(initialClaims);
@@ -49,10 +51,12 @@ export function ItemClaimList({
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const evenShareCents =
+  const evenShareCents = roundShareCents(
     computeEvenSplit(charges.grandTotalCents, allParticipants).find(
       (a) => a.participantId === currentParticipantId,
-    )?.totalCents ?? 0;
+    )?.totalCents ?? 0,
+    roundingPreferenceCents,
+  );
 
   const split = computeSplit(
     items.map((item) => ({ id: item.id, totalPriceCents: item.totalPriceCents })),
@@ -64,8 +68,11 @@ export function ItemClaimList({
   const myShareCents =
     splitMode === "even"
       ? evenShareCents
-      : (split.allocations.find((a) => a.participantId === currentParticipantId)
-          ?.totalCents ?? 0);
+      : roundShareCents(
+          split.allocations.find((a) => a.participantId === currentParticipantId)
+            ?.totalCents ?? 0,
+          roundingPreferenceCents,
+        );
 
   if (splitMode === "even") {
     return (
