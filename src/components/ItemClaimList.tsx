@@ -1,0 +1,169 @@
+"use client";
+
+import { useState } from "react";
+import { formatCents } from "@/lib/format";
+import { computeParticipantSubtotalCents } from "@/lib/calculations/splitEngine";
+import type { Item } from "@/types";
+
+export interface ClaimWithName {
+  itemId: string;
+  participantId: string;
+  participantName: string;
+}
+
+export function ItemClaimList({
+  sessionCode,
+  items,
+  initialClaims,
+  currentParticipantId,
+}: {
+  sessionCode: string;
+  items: Item[];
+  initialClaims: ClaimWithName[];
+  currentParticipantId: string;
+}) {
+  const [claims, setClaims] = useState(initialClaims);
+  const [sharedItemIds, setSharedItemIds] = useState(
+    () => new Set(items.filter((item) => item.isShared).map((item) => item.id)),
+  );
+  const [pendingItemId, setPendingItemId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const myShareCents = computeParticipantSubtotalCents(
+    items.map((item) => ({ id: item.id, totalPriceCents: item.totalPriceCents })),
+    claims.map((c) => ({ itemId: c.itemId, participantId: c.participantId })),
+    currentParticipantId,
+  );
+
+  async function claimItem(itemId: string, markShared = false) {
+    setError(null);
+    setPendingItemId(itemId);
+    try {
+      const res = await fetch(`/api/sessions/${sessionCode}/claims`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId, markShared }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Could not claim item");
+      setClaims((prev) => [
+        ...prev,
+        { itemId, participantId: currentParticipantId, participantName: "You" },
+      ]);
+      if (markShared) {
+        setSharedItemIds((prev) => new Set(prev).add(itemId));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setPendingItemId(null);
+    }
+  }
+
+  async function unclaimItem(itemId: string) {
+    setError(null);
+    setPendingItemId(itemId);
+    try {
+      const res = await fetch(`/api/sessions/${sessionCode}/claims/${itemId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Could not unclaim item");
+      setClaims((prev) =>
+        prev.filter(
+          (c) => !(c.itemId === itemId && c.participantId === currentParticipantId),
+        ),
+      );
+    } catch {
+      setError("Something went wrong");
+    } finally {
+      setPendingItemId(null);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        {items.map((item) => {
+          const claimantsForItem = claims.filter((c) => c.itemId === item.id);
+          const claimedByMe = claimantsForItem.some(
+            (c) => c.participantId === currentParticipantId,
+          );
+          const othersClaiming = claimantsForItem.filter(
+            (c) => c.participantId !== currentParticipantId,
+          );
+          const isPending = pendingItemId === item.id;
+          const isShared = sharedItemIds.has(item.id);
+          const isLockedByOther = !claimedByMe && othersClaiming.length > 0 && !isShared;
+
+          return (
+            <div
+              key={item.id}
+              className="flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3"
+            >
+              <button
+                type="button"
+                disabled={isPending || isLockedByOther}
+                onClick={() => (claimedByMe ? unclaimItem(item.id) : claimItem(item.id))}
+                aria-label={claimedByMe ? "Unclaim item" : "Claim item"}
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border ${
+                  claimedByMe
+                    ? "border-accent bg-accent text-accent-foreground"
+                    : "border-border bg-bg"
+                } disabled:opacity-50`}
+              >
+                {claimedByMe ? <CheckIcon /> : null}
+              </button>
+
+              <div className="flex-1">
+                <p className="font-medium text-text">{item.name}</p>
+                <p className="text-sm text-muted">
+                  {formatCents(item.totalPriceCents)}
+                  {othersClaiming.length > 0
+                    ? ` · ${isShared ? "Shared with" : "Claimed by"} ${othersClaiming
+                        .map((c) => c.participantName)
+                        .join(", ")}`
+                    : ""}
+                </p>
+              </div>
+
+              {isLockedByOther ? (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => claimItem(item.id, true)}
+                  className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-accent"
+                >
+                  + Split with me
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+
+      {error ? <p className="text-sm text-amber">{error}</p> : null}
+
+      <div className="sticky bottom-4 rounded-2xl border border-border bg-surface p-4 text-center shadow-sm">
+        <p className="text-sm text-muted">You owe</p>
+        <p className="text-3xl font-semibold text-text">{formatCents(myShareCents)}</p>
+      </div>
+    </div>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}

@@ -24,10 +24,22 @@ export async function POST(request: Request) {
         status: "draft",
         currency: "PHP",
       })
-      .select("code")
+      .select("id, code")
       .single();
 
     if (!error && data) {
+      // The payer needs a participants row too, so they can claim their own
+      // items through the same claims flow as everyone else (Day 5) instead of
+      // being a special case throughout the rest of the app. Stored as "Payer"
+      // rather than "You" — this name is what *other* participants see next to
+      // shared items, and "You" would misleadingly read as referring to them.
+      await supabase.from("participants").insert({
+        session_id: data.id,
+        name: "Payer",
+        device_token: deviceToken,
+        is_payer: true,
+      });
+
       return NextResponse.json({ code: data.code }, { status: 201 });
     }
 

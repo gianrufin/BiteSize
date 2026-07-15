@@ -1,9 +1,10 @@
-import type { Item, Participant, Session } from "@/types";
+import type { Item, ItemClaim, Participant, Session } from "@/types";
 import type { Database } from "@/types/database";
 
 type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
 type ItemRow = Database["public"]["Tables"]["items"]["Row"];
 type ParticipantRow = Database["public"]["Tables"]["participants"]["Row"];
+type ItemClaimRow = Database["public"]["Tables"]["item_claims"]["Row"];
 
 export function mapSessionRow(row: SessionRow): Session {
   return {
@@ -49,5 +50,14 @@ export function mapParticipantRow(row: ParticipantRow): Participant {
     deviceToken: row.device_token,
     isPayer: row.is_payer,
     joinedAt: row.joined_at,
+  };
+}
+
+export function mapItemClaimRow(row: ItemClaimRow): ItemClaim {
+  return {
+    id: row.id,
+    itemId: row.item_id,
+    participantId: row.participant_id,
+    claimedAt: row.claimed_at,
   };
 }
