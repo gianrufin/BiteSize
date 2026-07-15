@@ -45,6 +45,7 @@ export function SummaryView({
     | "taxCents"
     | "serviceChargeCents"
     | "tipCents"
+    | "deliveryFeeCents"
     | "discountCents"
     | "grandTotalCents"
   >;
@@ -140,6 +141,7 @@ export function SummaryView({
       taxCents: session.taxCents,
       serviceChargeCents: session.serviceChargeCents,
       tipCents: session.tipCents,
+      deliveryFeeCents: session.deliveryFeeCents,
       discountCents: session.discountCents,
       grandTotalCents: session.grandTotalCents,
     },
@@ -182,6 +184,7 @@ export function SummaryView({
     session.taxCents > 0 ||
     session.serviceChargeCents > 0 ||
     session.tipCents > 0 ||
+    session.deliveryFeeCents > 0 ||
     session.discountCents > 0;
 
   const nonPayerParticipants = participants.filter((p) => !p.isPayer);
@@ -284,9 +287,11 @@ export function SummaryView({
             taxCents: session.taxCents,
             serviceChargeCents: session.serviceChargeCents,
             tipCents: session.tipCents,
+            deliveryFeeCents: session.deliveryFeeCents,
             discountCents: session.discountCents,
           }}
           currency={session.currency}
+          subtotalCents={session.subtotalCents}
           initialAllocationMode={session.chargeAllocationMode}
           onSessionUpdate={setSession}
         />
@@ -426,6 +431,13 @@ export function SummaryView({
           ) : null}
           {session.tipCents > 0 ? (
             <BreakdownRow label="Tip" cents={session.tipCents} currency={session.currency} />
+          ) : null}
+          {session.deliveryFeeCents > 0 ? (
+            <BreakdownRow
+              label="Delivery fee"
+              cents={session.deliveryFeeCents}
+              currency={session.currency}
+            />
           ) : null}
           {session.discountCents > 0 ? (
             <BreakdownRow

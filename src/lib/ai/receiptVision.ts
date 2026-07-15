@@ -14,6 +14,10 @@ const RawReceiptItemSchema = z.object({
   confidence: z.number().min(0).max(1),
 });
 
+const RawTextItemsSchema = z.object({
+  items: z.array(RawReceiptItemSchema),
+});
+
 const RawReceiptSchema = z.object({
   items: z.array(RawReceiptItemSchema),
   currencyCode: z.string().nullable(),
@@ -108,4 +112,57 @@ export async function extractReceipt(
     currencyCode,
     venueName,
   };
+}
+
+const TEXT_ITEMS_PROMPT = `The following is a pasted block of text — copied from a notes app, a group
+chat, or typed by hand — describing what a group ordered. Lines might look like
+"2x Burger 250", "Fries x2 @125", "1. Cola - 60", "Latte  180", or similar loose
+formats; they won't be as clean as a printed receipt.
+
+Extract every distinct order line as an item:
+- name: the item name, cleaned up (don't include the quantity or price in it).
+- quantity: the number of units, defaulting to 1 if none is stated.
+- unitPrice: the price per unit as a plain decimal number. If only a line total is
+  given for multiple units, divide it by quantity to get the per-unit price.
+- confidence: your own 0–1 confidence in this line's accuracy. Lower it for anything
+  ambiguous, like a line with no clear price.
+
+Ignore lines that aren't an order (greetings, totals, running commentary). If nothing
+in the text looks like an order, return an empty items array.
+
+Respond with JSON only, matching the given schema.
+
+Text:
+"""
+{{TEXT}}
+"""`;
+
+export async function extractItemsFromText(text: string): Promise<ExtractedReceiptItem[]> {
+  const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+  const response = await client.models.generateContent({
+    model: MODEL,
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: TEXT_ITEMS_PROMPT.replace("{{TEXT}}", text) }],
+      },
+    ],
+    config: {
+      responseMimeType: "application/json",
+      responseJsonSchema: z.toJSONSchema(RawTextItemsSchema),
+    },
+  });
+
+  if (!response.text) return [];
+
+  const parsed = RawTextItemsSchema.safeParse(JSON.parse(response.text));
+  if (!parsed.success) return [];
+
+  return parsed.data.items.map((item) => ({
+    name: item.name,
+    quantity: item.quantity,
+    unitPriceCents: Math.round(item.unitPrice * 100),
+    confidence: item.confidence,
+  }));
 }

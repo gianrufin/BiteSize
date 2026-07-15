@@ -1,13 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { getCurrencySymbol } from "@/lib/format";
+import { autoCapitalize } from "@/lib/items/formatItemName";
+import type { RecentItem } from "@/lib/session/recentItems";
 
 export interface ItemFormValues {
   name: string;
   quantity: number;
   priceAmount: string;
 }
+
+const EMPTY_VALUES: ItemFormValues = { name: "", quantity: 1, priceAmount: "" };
 
 export function ItemForm({
   initial,
@@ -18,6 +22,8 @@ export function ItemForm({
   onDelete,
   onSplit,
   isSplitting = false,
+  resetAfterSubmit = false,
+  suggestions,
 }: {
   initial: ItemFormValues;
   submitLabel: string;
@@ -27,12 +33,18 @@ export function ItemForm({
   onDelete?: () => Promise<void>;
   onSplit?: () => Promise<void>;
   isSplitting?: boolean;
+  // Keeps the form open and clears it after each successful submit instead of
+  // closing — lets someone add several items back-to-back without re-tapping
+  // "Add item" every time.
+  resetAfterSubmit?: boolean;
+  suggestions?: RecentItem[];
 }) {
   const [name, setName] = useState(initial.name);
   const [quantity, setQuantity] = useState(String(initial.quantity));
   const [priceAmount, setPriceAmount] = useState(initial.priceAmount);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,12 +52,19 @@ export function ItemForm({
     setIsSubmitting(true);
     try {
       await onSubmit({
-        name,
+        name: autoCapitalize(name),
         quantity: Number(quantity) || 1,
         priceAmount,
       });
+      if (resetAfterSubmit) {
+        setName(EMPTY_VALUES.name);
+        setQuantity(String(EMPTY_VALUES.quantity));
+        setPriceAmount(EMPTY_VALUES.priceAmount);
+        nameInputRef.current?.focus();
+      }
     } catch {
       setError("Something went wrong — please try again.");
+    } finally {
       setIsSubmitting(false);
     }
   }
@@ -67,17 +86,45 @@ export function ItemForm({
     setQuantity(String(next));
   }
 
+  function applySuggestion(suggestion: RecentItem) {
+    setName(suggestion.name);
+    setPriceAmount((suggestion.unitPriceCents / 100).toFixed(2));
+  }
+
+  function formatPriceOnBlur() {
+    const n = Number(priceAmount);
+    if (priceAmount.trim() !== "" && Number.isFinite(n)) {
+      setPriceAmount(n.toFixed(2));
+    }
+  }
+
   return (
     <form
       onSubmit={handleSubmit}
       className="flex flex-col gap-3 card p-4"
     >
+      {suggestions && suggestions.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {suggestions.map((suggestion) => (
+            <button
+              key={suggestion.name}
+              type="button"
+              onClick={() => applySuggestion(suggestion)}
+              className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted"
+            >
+              {suggestion.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div>
         <label className="mb-1 block text-sm text-muted" htmlFor="item-name">
           Item name
         </label>
         <input
           id="item-name"
+          ref={nameInputRef}
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Margherita Pizza"
@@ -132,6 +179,7 @@ export function ItemForm({
               inputMode="decimal"
               value={priceAmount}
               onChange={(e) => setPriceAmount(e.target.value)}
+              onBlur={formatPriceOnBlur}
               placeholder="0.00"
               required
               className="w-full bg-transparent px-2 py-2 text-text outline-none"
@@ -156,7 +204,7 @@ export function ItemForm({
           disabled={isSubmitting}
           className="rounded-xl border border-border px-4 py-2 font-medium text-text"
         >
-          Cancel
+          {resetAfterSubmit ? "Done" : "Cancel"}
         </button>
         {onDelete ? (
           <button

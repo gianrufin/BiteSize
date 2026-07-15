@@ -12,6 +12,8 @@ export interface Session {
   payerDeviceToken: string;
   name: string | null;
   venueName: string | null;
+  venueLocation: string | null;
+  note: string | null;
   receiptImageUrl: string | null;
   gcashNumber: string | null;
   gcashQrUrl: string | null;
@@ -23,6 +25,7 @@ export interface Session {
   taxCents: number;
   serviceChargeCents: number;
   tipCents: number;
+  deliveryFeeCents: number;
   discountCents: number;
   grandTotalCents: number;
   createdAt: string;

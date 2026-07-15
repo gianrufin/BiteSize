@@ -17,7 +17,7 @@ export async function recomputeSessionTotals(sessionId: string) {
 
   const { data: session } = await supabase
     .from("sessions")
-    .select("tax_cents, service_charge_cents, tip_cents, discount_cents")
+    .select("tax_cents, service_charge_cents, tip_cents, delivery_fee_cents, discount_cents")
     .eq("id", sessionId)
     .single();
 
@@ -27,7 +27,8 @@ export async function recomputeSessionTotals(sessionId: string) {
     subtotalCents +
     session.tax_cents +
     session.service_charge_cents +
-    session.tip_cents -
+    session.tip_cents +
+    session.delivery_fee_cents -
     session.discount_cents;
 
   const { data: updated, error } = await supabase

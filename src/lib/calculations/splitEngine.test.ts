@@ -16,6 +16,7 @@ const noCharges = {
   taxCents: 0,
   serviceChargeCents: 0,
   tipCents: 0,
+  deliveryFeeCents: 0,
   discountCents: 0,
 };
 
@@ -72,6 +73,7 @@ describe("computeAllocations", () => {
       taxCents: 400,
       serviceChargeCents: 200,
       tipCents: 400,
+      deliveryFeeCents: 0,
       discountCents: 0,
     };
 
@@ -94,7 +96,13 @@ describe("computeAllocations", () => {
     const items: SplitItem[] = [{ id: "pizza", totalPriceCents: 2000 }];
     const claims: SplitClaim[] = [{ itemId: "pizza", participantId: "alex" }];
     const participants: SplitParticipant[] = [{ id: "alex", isPayer: true }];
-    const charges = { taxCents: 0, serviceChargeCents: 0, tipCents: 0, discountCents: 200 };
+    const charges = {
+      taxCents: 0,
+      serviceChargeCents: 0,
+      tipCents: 0,
+      deliveryFeeCents: 0,
+      discountCents: 200,
+    };
 
     const [alex] = computeAllocations(items, claims, participants, charges);
     expect(alex.discountCents).toBe(200);
@@ -118,8 +126,8 @@ describe("computeAllocations", () => {
 describe("reconcileRounding", () => {
   it("leaves allocations untouched when they already sum to the grand total", () => {
     const allocations = [
-      { participantId: "alex", claimedItemIds: [], itemSubtotalCents: 500, taxCents: 0, serviceChargeCents: 0, tipCents: 0, discountCents: 0, totalCents: 500 },
-      { participantId: "sam", claimedItemIds: [], itemSubtotalCents: 500, taxCents: 0, serviceChargeCents: 0, tipCents: 0, discountCents: 0, totalCents: 500 },
+      { participantId: "alex", claimedItemIds: [], itemSubtotalCents: 500, taxCents: 0, serviceChargeCents: 0, tipCents: 0, deliveryFeeCents: 0, discountCents: 0, totalCents: 500 },
+      { participantId: "sam", claimedItemIds: [], itemSubtotalCents: 500, taxCents: 0, serviceChargeCents: 0, tipCents: 0, deliveryFeeCents: 0, discountCents: 0, totalCents: 500 },
     ];
     const participants: SplitParticipant[] = [
       { id: "alex", isPayer: true },
@@ -158,7 +166,7 @@ describe("reconcileRounding", () => {
 
   it("throws if no participant is marked as payer", () => {
     const allocations = [
-      { participantId: "alex", claimedItemIds: [], itemSubtotalCents: 500, taxCents: 0, serviceChargeCents: 0, tipCents: 0, discountCents: 0, totalCents: 500 },
+      { participantId: "alex", claimedItemIds: [], itemSubtotalCents: 500, taxCents: 0, serviceChargeCents: 0, tipCents: 0, deliveryFeeCents: 0, discountCents: 0, totalCents: 500 },
     ];
     expect(() => reconcileRounding(allocations, 500, [{ id: "alex", isPayer: false }])).toThrow();
   });
@@ -228,6 +236,7 @@ describe("computeSplit", () => {
       taxCents: 0,
       serviceChargeCents: 1125,
       tipCents: 600,
+      deliveryFeeCents: 0,
       discountCents: 0,
       grandTotalCents: itemsSubtotal + 1125 + 600,
     };
@@ -311,6 +320,7 @@ describe("computeAllocations — chargeAllocationMode", () => {
     taxCents: 0,
     serviceChargeCents: 400,
     tipCents: 0,
+    deliveryFeeCents: 0,
     discountCents: 0,
   };
 

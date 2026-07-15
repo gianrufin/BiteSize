@@ -80,6 +80,7 @@ export default async function SessionPage({
     taxCents: session.tax_cents,
     serviceChargeCents: session.service_charge_cents,
     tipCents: session.tip_cents,
+    deliveryFeeCents: session.delivery_fee_cents,
     discountCents: session.discount_cents,
     grandTotalCents: session.grand_total_cents,
   };
@@ -129,6 +130,8 @@ export default async function SessionPage({
             sessionCode={session.code}
             initialName={session.name}
             initialVenueName={session.venue_name}
+            initialVenueLocation={session.venue_location}
+            initialNote={session.note}
           />
           <div className="flex shrink-0 gap-2">
             <a

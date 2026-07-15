@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatCents } from "@/lib/format";
 import { findDuplicateItems } from "@/lib/items/findDuplicateItems";
 import { offlineFetch } from "@/lib/offline/offlineFetch";
@@ -9,8 +9,10 @@ import {
   findQueuedMutationByMeta,
   updateQueuedMutation,
 } from "@/lib/offline/mutationQueue";
+import { getSuggestedItems, recordItemUsage, type RecentItem } from "@/lib/session/recentItems";
 import { ItemForm, type ItemFormValues } from "@/components/ItemForm";
 import { ItemRow, LOW_CONFIDENCE_THRESHOLD } from "@/components/ItemRow";
+import { PasteItemsForm } from "@/components/PasteItemsForm";
 import type { Item } from "@/types";
 
 function pairKey(idA: string, idB: string): string {
@@ -21,6 +23,10 @@ function isLocalId(id: string): boolean {
   return id.startsWith("local-");
 }
 
+function generateTempId(): string {
+  return `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export interface EditableSessionSummary {
   code: string;
   name: string | null;
@@ -28,6 +34,8 @@ export interface EditableSessionSummary {
   subtotalCents: number;
   grandTotalCents: number;
 }
+
+type AddMode = "closed" | "form" | "paste";
 
 export function ItemEditor({
   session: initialSession,
@@ -41,10 +49,19 @@ export function ItemEditor({
   const [session, setSession] = useState(initialSession);
   const [items, setItems] = useState(initialItems);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [isAdding, setIsAdding] = useState(false);
+  const [addMode, setAddMode] = useState<AddMode>("closed");
   const [dismissedPairs, setDismissedPairs] = useState<Set<string>>(new Set());
   const [mergingPairKey, setMergingPairKey] = useState<string | null>(null);
   const [splittingItemId, setSplittingItemId] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<RecentItem[]>([]);
+
+  useEffect(() => {
+    // localStorage isn't available during SSR, so the real list can only be
+    // read after mount — this sync-on-mount is the external-system case the
+    // lint rule means to exempt, not a derived-state anti-pattern.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSuggestions(getSuggestedItems());
+  }, []);
 
   const duplicatePairs = findDuplicateItems(items).filter(
     (pair) => !dismissedPairs.has(pairKey(pair.a.id, pair.b.id)),
@@ -69,17 +86,24 @@ export function ItemEditor({
     }));
   }
 
-  async function addItem(values: ItemFormValues) {
-    const unitPriceCents = Math.round(Number(values.priceAmount) * 100);
-    const totalPriceCents = Math.round(values.quantity * unitPriceCents);
-    const tempId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  // Low-level create, shared by the add form, "duplicate", and the paste-items
+  // flow. Offline-aware: queues and applies a temp-id optimistic item when
+  // there's no connection.
+  async function createItem(
+    name: string,
+    quantity: number,
+    unitPriceCents: number,
+    source: Item["source"] = "manual",
+  ): Promise<void> {
+    const totalPriceCents = Math.round(quantity * unitPriceCents);
+    const tempId = generateTempId();
 
     const result = await offlineFetch(
       `/api/sessions/${session.code}/items`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: values.name, quantity: values.quantity, unitPriceCents }),
+        body: JSON.stringify({ name, quantity, unitPriceCents }),
       },
       { tempId },
     );
@@ -90,18 +114,17 @@ export function ItemEditor({
         {
           id: tempId,
           sessionId: "",
-          name: values.name,
-          quantity: values.quantity,
+          name,
+          quantity,
           unitPriceCents,
           totalPriceCents,
           isShared: false,
           ocrConfidence: null,
-          source: "manual",
+          source,
           position: prev.length,
         },
       ]);
       adjustTotalsBy(totalPriceCents);
-      setIsAdding(false);
       return;
     }
 
@@ -109,25 +132,38 @@ export function ItemEditor({
     const { item, session: updatedSession } = await result.response.json();
     setItems((prev) => [...prev, item]);
     setSession(updatedSession);
-    setIsAdding(false);
   }
 
-  async function updateItem(itemId: string, values: ItemFormValues) {
-    const unitPriceCents = Math.round(Number(values.priceAmount) * 100);
-    const totalPriceCents = Math.round(values.quantity * unitPriceCents);
+  // Low-level patch, shared by the edit form and the inline quantity stepper.
+  async function patchItem(
+    itemId: string,
+    patch: Partial<{ name: string; quantity: number; unitPriceCents: number }>,
+  ): Promise<void> {
     const existing = items.find((item) => item.id === itemId);
-    const deltaCents = totalPriceCents - (existing?.totalPriceCents ?? 0);
+    if (!existing) return;
+
+    const nextName = patch.name ?? existing.name;
+    const nextQuantity = patch.quantity ?? existing.quantity;
+    const nextUnitPriceCents = patch.unitPriceCents ?? existing.unitPriceCents;
+    const totalPriceCents = Math.round(nextQuantity * nextUnitPriceCents);
+    const deltaCents = totalPriceCents - existing.totalPriceCents;
 
     const applyLocally = () => {
       setItems((prev) =>
         prev.map((item) =>
           item.id === itemId
-            ? { ...item, name: values.name, quantity: values.quantity, unitPriceCents, totalPriceCents, ocrConfidence: null }
+            ? {
+                ...item,
+                name: nextName,
+                quantity: nextQuantity,
+                unitPriceCents: nextUnitPriceCents,
+                totalPriceCents,
+                ocrConfidence: null,
+              }
             : item,
         ),
       );
       adjustTotalsBy(deltaCents);
-      setEditingItemId(null);
     };
 
     // A still-unsynced item created offline has no real id yet — amend the
@@ -138,7 +174,7 @@ export function ItemEditor({
       if (queued) {
         updateQueuedMutation(
           queued.id,
-          JSON.stringify({ name: values.name, quantity: values.quantity, unitPriceCents }),
+          JSON.stringify({ name: nextName, quantity: nextQuantity, unitPriceCents: nextUnitPriceCents }),
         );
       }
       applyLocally();
@@ -148,7 +184,7 @@ export function ItemEditor({
     const result = await offlineFetch(`/api/sessions/${session.code}/items/${itemId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: values.name, quantity: values.quantity, unitPriceCents }),
+      body: JSON.stringify({ name: nextName, quantity: nextQuantity, unitPriceCents: nextUnitPriceCents }),
     });
 
     if (result.status === "queued") {
@@ -160,6 +196,36 @@ export function ItemEditor({
     const { item, session: updatedSession } = await result.response.json();
     setItems((prev) => prev.map((existing) => (existing.id === item.id ? item : existing)));
     setSession(updatedSession);
+  }
+
+  async function addItem(values: ItemFormValues) {
+    const unitPriceCents = Math.round(Number(values.priceAmount) * 100);
+    await createItem(values.name, values.quantity, unitPriceCents);
+    recordItemUsage(values.name, unitPriceCents);
+    setSuggestions(getSuggestedItems());
+  }
+
+  async function duplicateItem(item: Item) {
+    try {
+      await createItem(item.name, item.quantity, item.unitPriceCents, item.source);
+    } catch {
+      // Best-effort — nothing to roll back, the original item is untouched.
+    }
+  }
+
+  async function adjustQuantity(item: Item, delta: number) {
+    const nextQuantity = Math.max(1, item.quantity + delta);
+    if (nextQuantity === item.quantity) return;
+    try {
+      await patchItem(item.id, { quantity: nextQuantity });
+    } catch {
+      // Best-effort — the row just stays at its last known quantity.
+    }
+  }
+
+  async function updateItem(itemId: string, values: ItemFormValues) {
+    const unitPriceCents = Math.round(Number(values.priceAmount) * 100);
+    await patchItem(itemId, { name: values.name, quantity: values.quantity, unitPriceCents });
     setEditingItemId(null);
   }
 
@@ -193,7 +259,6 @@ export function ItemEditor({
     const { session: updatedSession } = await result.response.json();
     setItems((prev) => prev.filter((existing) => existing.id !== itemId));
     setSession(updatedSession);
-    setEditingItemId(null);
   }
 
   // For an OCR line that actually merged two different items together. Keeps
@@ -342,7 +407,7 @@ export function ItemEditor({
           })
         : null}
 
-      {items.length === 0 && !isAdding ? (
+      {items.length === 0 && addMode === "closed" ? (
         <div className="rounded-2xl border border-dashed border-border py-8 text-center">
           <p className="font-medium text-text">No items yet</p>
           <p className="mt-1 text-sm text-muted">
@@ -374,6 +439,8 @@ export function ItemEditor({
                 item={item}
                 currency={session.currency}
                 onEdit={() => setEditingItemId(item.id)}
+                onQuantityChange={isLocked ? undefined : (delta) => adjustQuantity(item, delta)}
+                onDuplicate={isLocked ? undefined : () => duplicateItem(item)}
                 readOnly={isLocked}
               />
             ),
@@ -381,21 +448,41 @@ export function ItemEditor({
         </div>
       )}
 
-      {isLocked ? null : isAdding ? (
+      {isLocked ? null : addMode === "form" ? (
         <ItemForm
           submitLabel="Add item"
           initial={{ name: "", quantity: 1, priceAmount: "" }}
           currency={session.currency}
           onSubmit={addItem}
-          onCancel={() => setIsAdding(false)}
+          onCancel={() => setAddMode("closed")}
+          resetAfterSubmit
+          suggestions={suggestions}
+        />
+      ) : addMode === "paste" ? (
+        <PasteItemsForm
+          sessionCode={session.code}
+          onItemsAdded={(newItems, updatedSession) => {
+            setItems((prev) => [...prev, ...newItems]);
+            setSession(updatedSession);
+            setAddMode("closed");
+          }}
+          onCancel={() => setAddMode("closed")}
         />
       ) : (
-        <button
-          onClick={() => setIsAdding(true)}
-          className="rounded-2xl border border-dashed border-border py-3 text-center font-medium text-accent"
-        >
-          + Add Item Manually
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setAddMode("form")}
+            className="flex-1 rounded-2xl border border-dashed border-border py-3 text-center font-medium text-accent"
+          >
+            + Add Item Manually
+          </button>
+          <button
+            onClick={() => setAddMode("paste")}
+            className="flex-1 rounded-2xl border border-dashed border-border py-3 text-center font-medium text-accent"
+          >
+            Paste items
+          </button>
+        </div>
       )}
     </div>
   );

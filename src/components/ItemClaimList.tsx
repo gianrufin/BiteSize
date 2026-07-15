@@ -16,6 +16,7 @@ export interface ClaimListCharges {
   taxCents: number;
   serviceChargeCents: number;
   tipCents: number;
+  deliveryFeeCents: number;
   discountCents: number;
   grandTotalCents: number;
 }

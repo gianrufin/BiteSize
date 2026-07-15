@@ -9,6 +9,8 @@ export interface Database {
           payer_device_token: string;
           name: string | null;
           venue_name: string | null;
+          venue_location: string | null;
+          note: string | null;
           receipt_image_url: string | null;
           gcash_number: string | null;
           gcash_qr_url: string | null;
@@ -20,6 +22,7 @@ export interface Database {
           tax_cents: number;
           service_charge_cents: number;
           tip_cents: number;
+          delivery_fee_cents: number;
           discount_cents: number;
           grand_total_cents: number;
           created_at: string;

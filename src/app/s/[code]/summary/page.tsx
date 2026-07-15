@@ -68,7 +68,7 @@ export default async function SummaryPage({
 
         <div className="mt-6">
           <SummaryView
-            key={`${session.status}-${session.tax_cents}-${session.service_charge_cents}-${session.tip_cents}-${session.discount_cents}-${JSON.stringify(items)}-${JSON.stringify(claims)}-${JSON.stringify(participants)}`}
+            key={`${session.status}-${session.tax_cents}-${session.service_charge_cents}-${session.tip_cents}-${session.delivery_fee_cents}-${session.discount_cents}-${JSON.stringify(items)}-${JSON.stringify(claims)}-${JSON.stringify(participants)}`}
             sessionCode={session.code}
             initialSession={{
               name: session.name,
@@ -81,6 +81,7 @@ export default async function SummaryPage({
               taxCents: session.tax_cents,
               serviceChargeCents: session.service_charge_cents,
               tipCents: session.tip_cents,
+              deliveryFeeCents: session.delivery_fee_cents,
               discountCents: session.discount_cents,
               grandTotalCents: session.grand_total_cents,
             }}
@@ -120,6 +121,7 @@ export default async function SummaryPage({
     taxCents: session.tax_cents,
     serviceChargeCents: session.service_charge_cents,
     tipCents: session.tip_cents,
+    deliveryFeeCents: session.delivery_fee_cents,
     discountCents: session.discount_cents,
     grandTotalCents: session.grand_total_cents,
   };

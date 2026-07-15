@@ -26,6 +26,7 @@ export interface SplitCharges {
   taxCents: number;
   serviceChargeCents: number;
   tipCents: number;
+  deliveryFeeCents: number;
   discountCents: number;
   grandTotalCents: number;
 }
@@ -37,6 +38,7 @@ export interface ParticipantAllocation {
   taxCents: number;
   serviceChargeCents: number;
   tipCents: number;
+  deliveryFeeCents: number;
   discountCents: number;
   totalCents: number;
 }
@@ -122,6 +124,7 @@ export function computeAllocations(
     const taxCents = Math.round(charges.taxCents * ratio);
     const serviceChargeCents = Math.round(charges.serviceChargeCents * ratio);
     const tipCents = Math.round(charges.tipCents * ratio);
+    const deliveryFeeCents = Math.round(charges.deliveryFeeCents * ratio);
     const discountCents = Math.round(charges.discountCents * ratio);
 
     return {
@@ -131,8 +134,15 @@ export function computeAllocations(
       taxCents,
       serviceChargeCents,
       tipCents,
+      deliveryFeeCents,
       discountCents,
-      totalCents: itemSubtotalCents + taxCents + serviceChargeCents + tipCents - discountCents,
+      totalCents:
+        itemSubtotalCents +
+        taxCents +
+        serviceChargeCents +
+        tipCents +
+        deliveryFeeCents -
+        discountCents,
     };
   });
 }

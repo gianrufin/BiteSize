@@ -53,6 +53,16 @@ export async function PATCH(
     update.venue_name = venueName || null;
   }
 
+  if ("venueLocation" in body) {
+    const venueLocation = typeof body.venueLocation === "string" ? body.venueLocation.trim() : "";
+    update.venue_location = venueLocation || null;
+  }
+
+  if ("note" in body) {
+    const note = typeof body.note === "string" ? body.note.trim() : "";
+    update.note = note || null;
+  }
+
   if ("currency" in body) {
     const currency = typeof body.currency === "string" ? body.currency.trim().toUpperCase() : "";
     if (!/^[A-Z]{3}$/.test(currency)) {
@@ -114,6 +124,7 @@ export async function PATCH(
     ["taxCents", "tax_cents"],
     ["serviceChargeCents", "service_charge_cents"],
     ["tipCents", "tip_cents"],
+    ["deliveryFeeCents", "delivery_fee_cents"],
     ["discountCents", "discount_cents"],
   ] as const;
 

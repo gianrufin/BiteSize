@@ -8,8 +8,11 @@ export interface ChargesValue {
   taxCents: number;
   serviceChargeCents: number;
   tipCents: number;
+  deliveryFeeCents: number;
   discountCents: number;
 }
+
+const QUICK_PERCENTS = [10, 15, 20];
 
 function centsToInput(cents: number): string {
   return cents === 0 ? "" : (cents / 100).toFixed(2);
@@ -24,12 +27,14 @@ export function ChargesEditor({
   sessionCode,
   initialCharges,
   currency,
+  subtotalCents,
   initialAllocationMode,
   onSessionUpdate,
 }: {
   sessionCode: string;
   initialCharges: ChargesValue;
   currency: string;
+  subtotalCents: number;
   initialAllocationMode: ChargeAllocationMode;
   onSessionUpdate: (session: Session) => void;
 }) {
@@ -38,6 +43,7 @@ export function ChargesEditor({
     centsToInput(initialCharges.serviceChargeCents),
   );
   const [tip, setTip] = useState(centsToInput(initialCharges.tipCents));
+  const [deliveryFee, setDeliveryFee] = useState(centsToInput(initialCharges.deliveryFeeCents));
   const [discount, setDiscount] = useState(centsToInput(initialCharges.discountCents));
   const [isExpanded, setIsExpanded] = useState(
     Object.values(initialCharges).some((cents) => cents > 0),
@@ -46,6 +52,10 @@ export function ChargesEditor({
   const [error, setError] = useState<string | null>(null);
   const [allocationMode, setAllocationMode] = useState(initialAllocationMode);
   const [isSavingMode, setIsSavingMode] = useState(false);
+
+  function percentOfSubtotal(percent: number): string {
+    return ((subtotalCents * percent) / 100 / 100).toFixed(2);
+  }
 
   async function handleAllocationModeChange(next: ChargeAllocationMode) {
     if (next === allocationMode || isSavingMode) return;
@@ -80,6 +90,7 @@ export function ChargesEditor({
           taxCents: inputToCents(tax),
           serviceChargeCents: inputToCents(serviceCharge),
           tipCents: inputToCents(tip),
+          deliveryFeeCents: inputToCents(deliveryFee),
           discountCents: inputToCents(discount),
         }),
       });
@@ -99,7 +110,7 @@ export function ChargesEditor({
         onClick={() => setIsExpanded(true)}
         className="w-full rounded-2xl border border-dashed border-border py-3 text-center text-sm font-medium text-accent"
       >
-        + Add tax, service charge, tip, or discount
+        + Add tax, service charge, tip, delivery fee, or discount
       </button>
     );
   }
@@ -142,8 +153,23 @@ export function ChargesEditor({
           value={serviceCharge}
           onChange={setServiceCharge}
           currency={currency}
+          quickPercents={subtotalCents > 0 ? QUICK_PERCENTS : undefined}
+          onQuickPercent={(pct) => setServiceCharge(percentOfSubtotal(pct))}
         />
-        <ChargeField label="Tip" value={tip} onChange={setTip} currency={currency} />
+        <ChargeField
+          label="Tip"
+          value={tip}
+          onChange={setTip}
+          currency={currency}
+          quickPercents={subtotalCents > 0 ? QUICK_PERCENTS : undefined}
+          onQuickPercent={(pct) => setTip(percentOfSubtotal(pct))}
+        />
+        <ChargeField
+          label="Delivery fee"
+          value={deliveryFee}
+          onChange={setDeliveryFee}
+          currency={currency}
+        />
         <ChargeField
           label="Discount"
           value={discount}
@@ -170,11 +196,15 @@ function ChargeField({
   value,
   onChange,
   currency,
+  quickPercents,
+  onQuickPercent,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   currency: string;
+  quickPercents?: number[];
+  onQuickPercent?: (percent: number) => void;
 }) {
   return (
     <div>
@@ -192,6 +222,20 @@ function ChargeField({
           className="w-full bg-transparent px-2 py-2 text-text outline-none"
         />
       </div>
+      {quickPercents && onQuickPercent ? (
+        <div className="mt-1 flex gap-1">
+          {quickPercents.map((pct) => (
+            <button
+              key={pct}
+              type="button"
+              onClick={() => onQuickPercent(pct)}
+              className="rounded-full border border-border px-2 py-0.5 text-xs text-muted"
+            >
+              {pct}%
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
