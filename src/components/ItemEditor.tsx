@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { formatCents } from "@/lib/format";
-import { upsertRecentBill } from "@/lib/session/recentBills";
 import { findDuplicateItems } from "@/lib/items/findDuplicateItems";
 import { ItemForm, type ItemFormValues } from "@/components/ItemForm";
 import { ItemRow } from "@/components/ItemRow";
+import { TrackRecentBill } from "@/components/TrackRecentBill";
 import type { Item } from "@/types";
 
 function pairKey(idA: string, idB: string): string {
@@ -39,17 +39,6 @@ export function ItemEditor({
   const duplicatePairs = findDuplicateItems(items).filter(
     (pair) => !dismissedPairs.has(pairKey(pair.a.id, pair.b.id)),
   );
-
-  useEffect(() => {
-    upsertRecentBill({
-      code: session.code,
-      name: session.name ?? "New bill",
-      date: new Date().toISOString(),
-      totalCents: session.grandTotalCents,
-      currency: session.currency,
-      role: "payer",
-    });
-  }, [session.code, session.name, session.grandTotalCents, session.currency]);
 
   async function addItem(values: ItemFormValues) {
     const res = await fetch(`/api/sessions/${session.code}/items`, {
@@ -137,6 +126,13 @@ export function ItemEditor({
 
   return (
     <div className="flex flex-col gap-4">
+      <TrackRecentBill
+        code={session.code}
+        name={session.name ?? "New bill"}
+        totalCents={session.grandTotalCents}
+        currency={session.currency}
+        role="payer"
+      />
       <div className="card p-4">
         {isLocked ? (
           <p className="mb-1 text-xs font-medium text-amber">🔒 This bill is locked</p>

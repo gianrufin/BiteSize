@@ -12,6 +12,7 @@ import { PaymentPanel } from "@/components/PaymentPanel";
 import { RealtimeSync } from "@/components/RealtimeSync";
 import { SplitModeToggle } from "@/components/SplitModeToggle";
 import { NudgeParticipants } from "@/components/NudgeParticipants";
+import { TrackRecentBill } from "@/components/TrackRecentBill";
 
 export default async function SessionPage({
   params,
@@ -184,7 +185,23 @@ export default async function SessionPage({
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
       <RealtimeSync sessionId={session.id} />
-      <AppHeader />
+      <TrackRecentBill
+        code={session.code}
+        name={session.name ?? "Bill"}
+        totalCents={myShareCents}
+        currency={session.currency}
+        role="participant"
+      />
+      <AppHeader
+        right={
+          <a
+            href={`/s/${session.code}/summary`}
+            className="text-sm font-medium text-accent"
+          >
+            Summary
+          </a>
+        }
+      />
       <h1 className="mt-6 text-2xl font-semibold text-text">
         {session.name ?? "Bill"}
       </h1>

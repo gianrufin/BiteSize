@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { resizeImageForUpload } from "@/lib/image/resizeForUpload";
+import { autoCropQrCode } from "@/lib/image/cropQrCode";
 
 export function GCashQrUpload({
   sessionCode,
@@ -14,6 +15,7 @@ export function GCashQrUpload({
   const [qrUrl, setQrUrl] = useState(initialGcashQrUrl);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
 
   async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -21,11 +23,21 @@ export function GCashQrUpload({
     if (!file) return;
 
     setError(null);
+    setNote(null);
     setIsUploading(true);
     try {
-      const resized = await resizeImageForUpload(file);
+      // Full app screenshots are common here — try to auto-crop down to just
+      // the QR code so participants aren't scanning a photo of a nav bar.
+      const { blob, cropped } = await autoCropQrCode(file);
+      const upload = cropped ? blob : await resizeImageForUpload(file);
+      setNote(
+        cropped
+          ? "Cropped to just the QR code."
+          : "Couldn't find a QR code in that image — uploaded as-is.",
+      );
+
       const formData = new FormData();
-      formData.append("qr", resized, "qr.jpg");
+      formData.append("qr", upload, "qr.jpg");
       const res = await fetch(`/api/sessions/${sessionCode}/gcash-qr`, {
         method: "POST",
         body: formData,
@@ -34,6 +46,7 @@ export function GCashQrUpload({
       const data = await res.json();
       setQrUrl(data.session.gcashQrUrl);
     } catch {
+      setNote(null);
       setError("Couldn't upload that image — please try again.");
     } finally {
       setIsUploading(false);
@@ -73,6 +86,7 @@ export function GCashQrUpload({
           {isUploading ? "Uploading…" : qrUrl ? "Replace" : "Upload"}
         </button>
       </div>
+      {note ? <p className="mt-2 text-sm text-muted">{note}</p> : null}
       {error ? <p className="mt-2 text-sm text-amber">{error}</p> : null}
     </div>
   );
