@@ -45,6 +45,7 @@ export function ItemForm({
 
   async function handleDelete() {
     if (!onDelete) return;
+    if (!window.confirm(`Delete "${name || "this item"}"?`)) return;
     setIsSubmitting(true);
     try {
       await onDelete();
@@ -52,6 +53,11 @@ export function ItemForm({
       setError("Could not delete — please try again.");
       setIsSubmitting(false);
     }
+  }
+
+  function stepQuantity(delta: number) {
+    const next = Math.max(1, (Number(quantity) || 1) + delta);
+    setQuantity(String(next));
   }
 
   return (
@@ -73,19 +79,37 @@ export function ItemForm({
         />
       </div>
       <div className="flex gap-3">
-        <div className="w-20">
+        <div className="w-28">
           <label className="mb-1 block text-sm text-muted" htmlFor="item-qty">
             Qty
           </label>
-          <input
-            id="item-qty"
-            type="number"
-            min="1"
-            step="1"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-text outline-none focus:border-accent"
-          />
+          <div className="flex items-center rounded-xl border border-border bg-bg">
+            <button
+              type="button"
+              onClick={() => stepQuantity(-1)}
+              aria-label="Decrease quantity"
+              className="flex h-9 w-9 shrink-0 items-center justify-center text-lg text-muted"
+            >
+              −
+            </button>
+            <input
+              id="item-qty"
+              type="number"
+              min="1"
+              step="1"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              className="w-full bg-transparent text-center text-text outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+            <button
+              type="button"
+              onClick={() => stepQuantity(1)}
+              aria-label="Increase quantity"
+              className="flex h-9 w-9 shrink-0 items-center justify-center text-lg text-muted"
+            >
+              +
+            </button>
+          </div>
         </div>
         <div className="flex-1">
           <label className="mb-1 block text-sm text-muted" htmlFor="item-price">

@@ -92,26 +92,35 @@ export function ItemEditor({
         </p>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {items.map((item) =>
-          editingItemId === item.id ? (
-            <ItemForm
-              key={item.id}
-              submitLabel="Save"
-              initial={{
-                name: item.name,
-                quantity: item.quantity,
-                priceAmount: (item.unitPriceCents / 100).toFixed(2),
-              }}
-              onSubmit={(values) => updateItem(item.id, values)}
-              onCancel={() => setEditingItemId(null)}
-              onDelete={() => deleteItem(item.id)}
-            />
-          ) : (
-            <ItemRow key={item.id} item={item} onEdit={() => setEditingItemId(item.id)} />
-          ),
-        )}
-      </div>
+      {items.length === 0 && !isAdding ? (
+        <div className="rounded-2xl border border-dashed border-border py-8 text-center">
+          <p className="font-medium text-text">No items yet</p>
+          <p className="mt-1 text-sm text-muted">
+            Add what was ordered below to start splitting the bill.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {items.map((item) =>
+            editingItemId === item.id ? (
+              <ItemForm
+                key={item.id}
+                submitLabel="Save"
+                initial={{
+                  name: item.name,
+                  quantity: item.quantity,
+                  priceAmount: (item.unitPriceCents / 100).toFixed(2),
+                }}
+                onSubmit={(values) => updateItem(item.id, values)}
+                onCancel={() => setEditingItemId(null)}
+                onDelete={() => deleteItem(item.id)}
+              />
+            ) : (
+              <ItemRow key={item.id} item={item} onEdit={() => setEditingItemId(item.id)} />
+            ),
+          )}
+        </div>
+      )}
 
       {isAdding ? (
         <ItemForm

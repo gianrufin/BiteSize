@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { formatCents } from "@/lib/format";
 import { computeSplit } from "@/lib/calculations/splitEngine";
+import { buildSummaryText } from "@/lib/session/summaryText";
 import { ChargesEditor } from "@/components/ChargesEditor";
+import { CopyLinkButton } from "@/components/CopyLinkButton";
 import type { Item, Session } from "@/types";
 
 export interface SummaryParticipant {
@@ -58,6 +60,18 @@ export function SummaryView({
     split.allocations.map((a) => [a.participantId, a]),
   );
 
+  const summaryText = buildSummaryText(
+    session.name ?? "Bill",
+    session.grandTotalCents,
+    participants.map((participant) => ({
+      name: participant.name,
+      isPayer: participant.isPayer,
+      amountCents: participant.isPayer
+        ? session.grandTotalCents
+        : (allocationByParticipantId.get(participant.id)?.totalCents ?? 0),
+    })),
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-2xl border border-border bg-surface p-5 text-center">
@@ -65,6 +79,13 @@ export function SummaryView({
         <p className="text-4xl font-semibold text-text">
           {formatCents(session.grandTotalCents)}
         </p>
+        <div className="mt-3 flex justify-center">
+          <CopyLinkButton
+            text={summaryText}
+            label="Copy Summary"
+            className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-accent"
+          />
+        </div>
       </div>
 
       {split.unclaimedItemIds.length > 0 ? (

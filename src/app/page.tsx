@@ -2,6 +2,7 @@ import { LogoWordmark } from "@/components/Logo";
 import { NewBillButton } from "@/components/NewBillButton";
 import { RecentBillsList } from "@/components/RecentBillsList";
 import { SettingsLink } from "@/components/SettingsLink";
+import { JoinByCodeForm } from "@/components/JoinByCodeForm";
 
 export default function Home() {
   return (
@@ -15,6 +16,8 @@ export default function Home() {
       <div className="mt-10">
         <NewBillButton />
       </div>
+
+      <JoinByCodeForm />
 
       <RecentBillsList />
     </main>
