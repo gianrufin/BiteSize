@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getDeviceToken } from "@/lib/session/deviceToken";
 import { mapParticipantRow } from "@/lib/mappers";
+import type { Database } from "@/types/database";
+
+type ParticipantUpdate = Database["public"]["Tables"]["participants"]["Update"];
 
 const VALID_STATUSES = ["unpaid", "submitted", "confirmed"] as const;
 type PaymentStatusValue = (typeof VALID_STATUSES)[number];
@@ -46,34 +49,51 @@ export async function PATCH(
   }
 
   const body = await request.json().catch(() => ({}));
-  const paymentStatus = body?.paymentStatus;
+  const update: ParticipantUpdate = {};
 
-  if (!isPaymentStatus(paymentStatus)) {
-    return NextResponse.json(
-      { error: "paymentStatus must be 'unpaid', 'submitted', or 'confirmed'" },
-      { status: 400 },
-    );
+  if ("paymentStatus" in body) {
+    if (!isPaymentStatus(body.paymentStatus)) {
+      return NextResponse.json(
+        { error: "paymentStatus must be 'unpaid', 'submitted', or 'confirmed'" },
+        { status: 400 },
+      );
+    }
+    // Only the payer can mark a payment as confirmed — a participant can say
+    // "I've paid" but can't confirm receipt on the payer's behalf.
+    if (body.paymentStatus === "confirmed" && !isPayer) {
+      return NextResponse.json(
+        { error: "Only the payer can confirm a payment" },
+        { status: 403 },
+      );
+    }
+    update.payment_status = body.paymentStatus;
   }
 
-  // Only the payer can mark a payment as confirmed — a participant can say
-  // "I've paid" but can't confirm receipt on the payer's behalf.
-  if (paymentStatus === "confirmed" && !isPayer) {
-    return NextResponse.json(
-      { error: "Only the payer can confirm a payment" },
-      { status: 403 },
-    );
+  if ("excludedFromCharges" in body) {
+    // Who bears tax/service/tip is the payer's call, not the participant's own.
+    if (!isPayer) {
+      return NextResponse.json(
+        { error: "Only the payer can change who's included in charges" },
+        { status: 403 },
+      );
+    }
+    update.excluded_from_charges = Boolean(body.excludedFromCharges);
+  }
+
+  if (Object.keys(update).length === 0) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
   const { data: updated, error } = await supabase
     .from("participants")
-    .update({ payment_status: paymentStatus })
+    .update(update)
     .eq("id", participantId)
     .select("*")
     .single();
 
   if (error || !updated) {
     return NextResponse.json(
-      { error: error?.message ?? "Could not update payment status" },
+      { error: error?.message ?? "Could not update participant" },
       { status: 500 },
     );
   }

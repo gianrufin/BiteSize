@@ -5,6 +5,7 @@ import {
   computeParticipantSubtotalCents,
   computeSplit,
   reconcileRounding,
+  type SplitCharges,
   type SplitClaim,
   type SplitItem,
   type SplitParticipant,
@@ -289,5 +290,69 @@ describe("computeEvenSplit", () => {
 
   it("returns an empty array for no participants", () => {
     expect(computeEvenSplit(1000, [])).toEqual([]);
+  });
+});
+
+describe("computeAllocations — chargeAllocationMode", () => {
+  const items: SplitItem[] = [
+    { id: "pizza", totalPriceCents: 3000 }, // alex
+    { id: "salad", totalPriceCents: 1000 }, // sam
+  ];
+  const claims: SplitClaim[] = [
+    { itemId: "pizza", participantId: "alex" },
+    { itemId: "salad", participantId: "sam" },
+  ];
+  const participants: SplitParticipant[] = [
+    { id: "alex", isPayer: true },
+    { id: "sam", isPayer: false },
+  ];
+  const charges: Omit<SplitCharges, "grandTotalCents"> = {
+    taxCents: 0,
+    serviceChargeCents: 400,
+    tipCents: 0,
+    discountCents: 0,
+  };
+
+  it("defaults to proportional-by-item-subtotal (unchanged behavior)", () => {
+    const allocations = computeAllocations(items, claims, participants, charges);
+    // alex: 3000/4000 * 400 = 300, sam: 1000/4000 * 400 = 100
+    expect(allocations.find((a) => a.participantId === "alex")?.serviceChargeCents).toBe(300);
+    expect(allocations.find((a) => a.participantId === "sam")?.serviceChargeCents).toBe(100);
+  });
+
+  it("splits evenly across included participants when mode is 'equal'", () => {
+    const allocations = computeAllocations(items, claims, participants, charges, "equal");
+    expect(allocations.find((a) => a.participantId === "alex")?.serviceChargeCents).toBe(200);
+    expect(allocations.find((a) => a.participantId === "sam")?.serviceChargeCents).toBe(200);
+  });
+
+  it("gives an excluded participant a zero charge share in either mode", () => {
+    const withExclusion: SplitParticipant[] = [
+      { id: "alex", isPayer: true },
+      { id: "sam", isPayer: false, excludedFromCharges: true },
+    ];
+
+    const proportional = computeAllocations(items, claims, withExclusion, charges);
+    expect(proportional.find((a) => a.participantId === "sam")?.serviceChargeCents).toBe(0);
+
+    const equal = computeAllocations(items, claims, withExclusion, charges, "equal");
+    expect(equal.find((a) => a.participantId === "sam")?.serviceChargeCents).toBe(0);
+    // Only alex is left included, so alex gets the whole charge in "equal" mode.
+    expect(equal.find((a) => a.participantId === "alex")?.serviceChargeCents).toBe(400);
+  });
+
+  it("still reconciles to the exact grand total when someone is excluded", () => {
+    const withExclusion: SplitParticipant[] = [
+      { id: "alex", isPayer: true },
+      { id: "sam", isPayer: false, excludedFromCharges: true },
+    ];
+    const fullCharges: SplitCharges = { ...charges, grandTotalCents: 4400 };
+
+    const result = computeSplit(items, claims, withExclusion, fullCharges, "equal");
+    const total = result.allocations.reduce((sum, a) => sum + a.totalCents, 0);
+
+    expect(total).toBe(4400);
+    // sam pays only their item subtotal, no charge share.
+    expect(result.allocations.find((a) => a.participantId === "sam")?.totalCents).toBe(1000);
   });
 });

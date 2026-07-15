@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { formatCents } from "@/lib/format";
 import { computeEvenSplit, computeSplit } from "@/lib/calculations/splitEngine";
-import type { Item, SplitMode } from "@/types";
+import type { ChargeAllocationMode, Item, SplitMode } from "@/types";
 
 export interface ClaimWithName {
   itemId: string;
@@ -28,16 +28,18 @@ export function ItemClaimList({
   charges,
   currency,
   splitMode = "items",
+  chargeAllocationMode = "proportional",
   isBillLocked = false,
 }: {
   sessionCode: string;
   items: Item[];
   initialClaims: ClaimWithName[];
   currentParticipantId: string;
-  allParticipants: { id: string; isPayer: boolean }[];
+  allParticipants: { id: string; isPayer: boolean; excludedFromCharges?: boolean }[];
   charges: ClaimListCharges;
   currency: string;
   splitMode?: SplitMode;
+  chargeAllocationMode?: ChargeAllocationMode;
   isBillLocked?: boolean;
 }) {
   const [claims, setClaims] = useState(initialClaims);
@@ -57,6 +59,7 @@ export function ItemClaimList({
     claims.map((c) => ({ itemId: c.itemId, participantId: c.participantId })),
     allParticipants,
     charges,
+    chargeAllocationMode,
   );
   const myShareCents =
     splitMode === "even"

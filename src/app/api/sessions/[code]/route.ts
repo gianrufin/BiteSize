@@ -67,6 +67,17 @@ export async function PATCH(
     update.split_mode = body.splitMode;
   }
 
+  if ("chargeAllocationMode" in body) {
+    if (body.chargeAllocationMode !== "proportional" && body.chargeAllocationMode !== "equal") {
+      return NextResponse.json(
+        { error: "chargeAllocationMode must be 'proportional' or 'equal'" },
+        { status: 400 },
+      );
+    }
+    update.charge_allocation_mode = body.chargeAllocationMode;
+    touchesCharges = true;
+  }
+
   const chargeFields = [
     ["taxCents", "tax_cents"],
     ["serviceChargeCents", "service_charge_cents"],

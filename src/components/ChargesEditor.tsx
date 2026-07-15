@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { getCurrencySymbol } from "@/lib/format";
-import type { Session } from "@/types";
+import type { ChargeAllocationMode, Session } from "@/types";
 
 export interface ChargesValue {
   taxCents: number;
@@ -24,11 +24,13 @@ export function ChargesEditor({
   sessionCode,
   initialCharges,
   currency,
+  initialAllocationMode,
   onSessionUpdate,
 }: {
   sessionCode: string;
   initialCharges: ChargesValue;
   currency: string;
+  initialAllocationMode: ChargeAllocationMode;
   onSessionUpdate: (session: Session) => void;
 }) {
   const [tax, setTax] = useState(centsToInput(initialCharges.taxCents));
@@ -42,6 +44,29 @@ export function ChargesEditor({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [allocationMode, setAllocationMode] = useState(initialAllocationMode);
+  const [isSavingMode, setIsSavingMode] = useState(false);
+
+  async function handleAllocationModeChange(next: ChargeAllocationMode) {
+    if (next === allocationMode || isSavingMode) return;
+    const previous = allocationMode;
+    setAllocationMode(next);
+    setIsSavingMode(true);
+    try {
+      const res = await fetch(`/api/sessions/${sessionCode}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chargeAllocationMode: next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Could not update allocation mode");
+      onSessionUpdate(data.session);
+    } catch {
+      setAllocationMode(previous);
+    } finally {
+      setIsSavingMode(false);
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -84,6 +109,32 @@ export function ChargesEditor({
       onSubmit={handleSave}
       className="flex flex-col gap-3 card p-4"
     >
+      <div>
+        <label className="mb-1 block text-sm text-muted">Split these charges</label>
+        <div className="flex rounded-xl border border-border bg-bg p-1">
+          {(
+            [
+              { value: "proportional", label: "By item share" },
+              { value: "equal", label: "Evenly" },
+            ] as const
+          ).map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              disabled={isSavingMode}
+              onClick={() => handleAllocationModeChange(option.value)}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition disabled:opacity-60 ${
+                allocationMode === option.value
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <ChargeField label="Tax" value={tax} onChange={setTax} currency={currency} />
         <ChargeField

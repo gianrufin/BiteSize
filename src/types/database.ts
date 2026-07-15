@@ -14,6 +14,7 @@ export interface Database {
           gcash_qr_url: string | null;
           currency: string;
           split_mode: "items" | "even";
+          charge_allocation_mode: "proportional" | "equal";
           subtotal_cents: number;
           tax_cents: number;
           service_charge_cents: number;
@@ -61,6 +62,7 @@ export interface Database {
           is_payer: boolean;
           payment_status: "unpaid" | "submitted" | "confirmed";
           payment_proof_url: string | null;
+          excluded_from_charges: boolean;
           joined_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["participants"]["Row"]> & {

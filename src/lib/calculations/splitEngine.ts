@@ -17,7 +17,10 @@ export interface SplitClaim {
 export interface SplitParticipant {
   id: string;
   isPayer: boolean;
+  excludedFromCharges?: boolean;
 }
+
+export type ChargeAllocationMode = "proportional" | "equal";
 
 export interface SplitCharges {
   taxCents: number;
@@ -78,17 +81,27 @@ export function computeParticipantSubtotalCents(
   }, 0);
 }
 
-// Allocates each participant's item subtotal plus their proportional share of
+// Allocates each participant's item subtotal plus their share of
 // tax/service/tip/discount. Does NOT reconcile rounding against the receipt's
 // real total yet — see reconcileRounding.
+//
+// chargeAllocationMode "proportional" (default) charges each participant in
+// proportion to their share of the whole bill's item subtotal — not just what
+// they personally claimed relative to other claimants. "equal" instead splits
+// each charge evenly across every non-excluded participant regardless of what
+// they ordered. Either way, a participant with excludedFromCharges gets a
+// ratio of 0 — their share isn't redistributed to anyone else, it's absorbed
+// by the payer via reconcileRounding (the same place rounding remainders go).
 export function computeAllocations(
   items: SplitItem[],
   claims: SplitClaim[],
   participants: SplitParticipant[],
   charges: Omit<SplitCharges, "grandTotalCents">,
+  chargeAllocationMode: ChargeAllocationMode = "proportional",
 ): ParticipantAllocation[] {
   const claimsByItem = groupClaimsByItem(claims);
   const itemsSubtotalCents = items.reduce((sum, item) => sum + item.totalPriceCents, 0);
+  const includedCount = participants.filter((p) => !p.excludedFromCharges).length;
 
   return participants.map((participant) => {
     const claimedItemIds = items
@@ -97,10 +110,15 @@ export function computeAllocations(
 
     const itemSubtotalCents = computeParticipantSubtotalCents(items, claims, participant.id);
 
-    // Charges aren't itemized per person, so each participant's share is
-    // proportional to their share of the *whole* bill's item subtotal — not just
-    // what they personally claimed relative to other claimants.
-    const ratio = itemsSubtotalCents > 0 ? itemSubtotalCents / itemsSubtotalCents : 0;
+    const ratio = participant.excludedFromCharges
+      ? 0
+      : chargeAllocationMode === "equal"
+        ? includedCount > 0
+          ? 1 / includedCount
+          : 0
+        : itemsSubtotalCents > 0
+          ? itemSubtotalCents / itemsSubtotalCents
+          : 0;
     const taxCents = Math.round(charges.taxCents * ratio);
     const serviceChargeCents = Math.round(charges.serviceChargeCents * ratio);
     const tipCents = Math.round(charges.tipCents * ratio);
@@ -151,6 +169,7 @@ export function computeSplit(
   claims: SplitClaim[],
   participants: SplitParticipant[],
   charges: SplitCharges,
+  chargeAllocationMode: ChargeAllocationMode = "proportional",
 ): SplitResult {
   const claimsByItem = groupClaimsByItem(claims);
   const unclaimedItemIds = items
@@ -160,7 +179,13 @@ export function computeSplit(
     .filter((item) => unclaimedItemIds.includes(item.id))
     .reduce((sum, item) => sum + item.totalPriceCents, 0);
 
-  const rawAllocations = computeAllocations(items, claims, participants, charges);
+  const rawAllocations = computeAllocations(
+    items,
+    claims,
+    participants,
+    charges,
+    chargeAllocationMode,
+  );
   const allocations = reconcileRounding(rawAllocations, charges.grandTotalCents, participants);
 
   return { allocations, unclaimedItemIds, unclaimedCents };

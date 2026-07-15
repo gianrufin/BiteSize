@@ -19,6 +19,7 @@ export function mapSessionRow(row: SessionRow): Session {
     gcashQrUrl: row.gcash_qr_url,
     currency: row.currency,
     splitMode: row.split_mode,
+    chargeAllocationMode: row.charge_allocation_mode,
     subtotalCents: row.subtotal_cents,
     taxCents: row.tax_cents,
     serviceChargeCents: row.service_charge_cents,
@@ -54,6 +55,7 @@ export function mapParticipantRow(row: ParticipantRow): Participant {
     isPayer: row.is_payer,
     paymentStatus: row.payment_status,
     paymentProofUrl: row.payment_proof_url,
+    excludedFromCharges: row.excluded_from_charges,
     joinedAt: row.joined_at,
   };
 }

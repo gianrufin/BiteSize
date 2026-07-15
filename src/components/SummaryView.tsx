@@ -15,6 +15,7 @@ export interface SummaryParticipant {
   isPayer: boolean;
   paymentStatus: PaymentStatus;
   paymentProofUrl: string | null;
+  excludedFromCharges: boolean;
 }
 
 export interface SummaryClaim {
@@ -36,6 +37,7 @@ export function SummaryView({
     | "status"
     | "currency"
     | "splitMode"
+    | "chargeAllocationMode"
     | "subtotalCents"
     | "taxCents"
     | "serviceChargeCents"
@@ -50,10 +52,36 @@ export function SummaryView({
   const [session, setSession] = useState(initialSession);
   const [isTogglingLock, setIsTogglingLock] = useState(false);
   const [statusOverrides, setStatusOverrides] = useState<Record<string, PaymentStatus>>({});
+  const [exclusionOverrides, setExclusionOverrides] = useState<Record<string, boolean>>({});
   const isLocked = session.status === "locked";
 
   function getPaymentStatus(participant: SummaryParticipant): PaymentStatus {
     return statusOverrides[participant.id] ?? participant.paymentStatus;
+  }
+
+  function getExcludedFromCharges(participant: SummaryParticipant): boolean {
+    return exclusionOverrides[participant.id] ?? participant.excludedFromCharges;
+  }
+
+  async function toggleExcludedFromCharges(participantId: string, next: boolean) {
+    setExclusionOverrides((prev) => ({ ...prev, [participantId]: next }));
+    try {
+      const res = await fetch(
+        `/api/sessions/${sessionCode}/participants/${participantId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ excludedFromCharges: next }),
+        },
+      );
+      if (!res.ok) throw new Error("Could not update");
+    } catch {
+      setExclusionOverrides((prev) => {
+        const rest = { ...prev };
+        delete rest[participantId];
+        return rest;
+      });
+    }
   }
 
   async function setPaymentStatus(participantId: string, next: PaymentStatus) {
@@ -100,7 +128,11 @@ export function SummaryView({
   const split = computeSplit(
     items.map((item) => ({ id: item.id, totalPriceCents: item.totalPriceCents })),
     claims,
-    participants.map((p) => ({ id: p.id, isPayer: p.isPayer })),
+    participants.map((p) => ({
+      id: p.id,
+      isPayer: p.isPayer,
+      excludedFromCharges: getExcludedFromCharges(p),
+    })),
     {
       taxCents: session.taxCents,
       serviceChargeCents: session.serviceChargeCents,
@@ -108,6 +140,7 @@ export function SummaryView({
       discountCents: session.discountCents,
       grandTotalCents: session.grandTotalCents,
     },
+    session.chargeAllocationMode,
   );
 
   const evenAllocations = computeEvenSplit(
@@ -136,6 +169,12 @@ export function SummaryView({
     summaryParticipants,
     session.currency,
   );
+
+  const hasCharges =
+    session.taxCents > 0 ||
+    session.serviceChargeCents > 0 ||
+    session.tipCents > 0 ||
+    session.discountCents > 0;
 
   const nonPayerParticipants = participants.filter((p) => !p.isPayer);
   const totalOwedCents = nonPayerParticipants.reduce(
@@ -217,6 +256,7 @@ export function SummaryView({
             discountCents: session.discountCents,
           }}
           currency={session.currency}
+          initialAllocationMode={session.chargeAllocationMode}
           onSessionUpdate={setSession}
         />
       )}
@@ -306,6 +346,20 @@ export function SummaryView({
                       ) : null}
                     </div>
                   </div>
+                ) : null}
+
+                {!isPayer && !isEvenSplit && hasCharges ? (
+                  <label className="mt-2 flex items-center gap-2 border-t border-border pt-2 text-sm text-muted">
+                    <input
+                      type="checkbox"
+                      checked={!getExcludedFromCharges(participant)}
+                      onChange={(e) =>
+                        toggleExcludedFromCharges(participant.id, !e.target.checked)
+                      }
+                      className="h-4 w-4 accent-accent"
+                    />
+                    Include in tax / service charge / tip
+                  </label>
                 ) : null}
               </div>
             );

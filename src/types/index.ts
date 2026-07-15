@@ -2,6 +2,7 @@ export type SessionStatus = "draft" | "open" | "locked";
 export type ItemSource = "ocr" | "manual";
 export type SplitMode = "items" | "even";
 export type PaymentStatus = "unpaid" | "submitted" | "confirmed";
+export type ChargeAllocationMode = "proportional" | "equal";
 
 export interface Session {
   id: string;
@@ -15,6 +16,7 @@ export interface Session {
   gcashQrUrl: string | null;
   currency: string;
   splitMode: SplitMode;
+  chargeAllocationMode: ChargeAllocationMode;
   subtotalCents: number;
   taxCents: number;
   serviceChargeCents: number;
@@ -46,6 +48,7 @@ export interface Participant {
   isPayer: boolean;
   paymentStatus: PaymentStatus;
   paymentProofUrl: string | null;
+  excludedFromCharges: boolean;
   joinedAt: string;
 }
 

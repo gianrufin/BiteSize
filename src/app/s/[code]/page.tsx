@@ -63,7 +63,11 @@ export default async function SessionPage({
     ? participants.find((p) => p.deviceToken === deviceToken)
     : undefined;
 
-  const allParticipants = participants.map((p) => ({ id: p.id, isPayer: p.isPayer }));
+  const allParticipants = participants.map((p) => ({
+    id: p.id,
+    isPayer: p.isPayer,
+    excludedFromCharges: p.excludedFromCharges,
+  }));
   const isLocked = session.status === "locked";
   const charges = {
     taxCents: session.tax_cents,
@@ -146,6 +150,7 @@ export default async function SessionPage({
               charges={charges}
               currency={session.currency}
               splitMode={session.split_mode}
+              chargeAllocationMode={session.charge_allocation_mode}
               isBillLocked={isLocked}
             />
           </div>
@@ -179,6 +184,7 @@ export default async function SessionPage({
           claims,
           allParticipants,
           charges,
+          session.charge_allocation_mode,
         ).allocations.find((a) => a.participantId === currentParticipant.id)?.totalCents ??
         0);
 
@@ -234,6 +240,7 @@ export default async function SessionPage({
           charges={charges}
           currency={session.currency}
           splitMode={session.split_mode}
+          chargeAllocationMode={session.charge_allocation_mode}
           isBillLocked={isLocked}
         />
       </div>

@@ -74,6 +74,7 @@ export default async function SummaryPage({
               status: session.status,
               currency: session.currency,
               splitMode: session.split_mode,
+              chargeAllocationMode: session.charge_allocation_mode,
               subtotalCents: session.subtotal_cents,
               taxCents: session.tax_cents,
               serviceChargeCents: session.service_charge_cents,
@@ -88,6 +89,7 @@ export default async function SummaryPage({
               isPayer: p.isPayer,
               paymentStatus: p.paymentStatus,
               paymentProofUrl: p.paymentProofUrl,
+              excludedFromCharges: p.excludedFromCharges,
             }))}
             claims={claims.map((c) => ({
               itemId: c.itemId,
@@ -107,7 +109,11 @@ export default async function SummaryPage({
     redirect(`/s/${session.code}/join`);
   }
 
-  const allParticipants = participants.map((p) => ({ id: p.id, isPayer: p.isPayer }));
+  const allParticipants = participants.map((p) => ({
+    id: p.id,
+    isPayer: p.isPayer,
+    excludedFromCharges: p.excludedFromCharges,
+  }));
   const charges = {
     taxCents: session.tax_cents,
     serviceChargeCents: session.service_charge_cents,
@@ -126,6 +132,7 @@ export default async function SummaryPage({
           claims,
           allParticipants,
           charges,
+          session.charge_allocation_mode,
         ).allocations.find((a) => a.participantId === currentParticipant.id)?.totalCents ??
         0);
 
