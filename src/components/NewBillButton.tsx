@@ -3,8 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getDeviceSettings } from "@/lib/session/settings";
-import { recognizeReceiptText } from "@/lib/ocr/tesseract";
-import { parseReceiptItems } from "@/lib/ocr/parseReceiptText";
+import { resizeImageForUpload } from "@/lib/image/resizeForUpload";
 
 type Status = "idle" | "scanning" | "creating";
 
@@ -25,7 +24,6 @@ export function NewBillButton() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<Status>("idle");
-  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
@@ -35,32 +33,20 @@ export function NewBillButton() {
 
     setError(null);
     setStatus("scanning");
-    setProgress(0);
 
     try {
-      const text = await recognizeReceiptText(file, setProgress);
-      const parsedItems = parseReceiptItems(text);
-
-      setStatus("creating");
+      const resized = await resizeImageForUpload(file);
       const code = await createSession();
 
-      // OCR is additive, never a blocker — if nothing parsed, the payer just
-      // lands on an empty bill and adds items manually, same as always.
-      await Promise.all(
-        parsedItems.map((item) =>
-          fetch(`/api/sessions/${code}/items`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: item.name,
-              quantity: item.quantity,
-              unitPriceCents: item.unitPriceCents,
-              source: "ocr",
-              ocrConfidence: item.confidence,
-            }),
-          }),
-        ),
-      );
+      // AI scanning is additive, never a blocker — if nothing is extracted, the
+      // payer just lands on an empty bill and adds items manually, same as always.
+      const formData = new FormData();
+      formData.append("image", resized, "receipt.jpg");
+      const res = await fetch(`/api/sessions/${code}/receipt/scan`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Could not read that receipt");
 
       router.push(`/s/${code}`);
     } catch {
@@ -104,7 +90,7 @@ export function NewBillButton() {
         <div className="flex-1">
           <p className="font-medium text-text">
             {status === "scanning"
-              ? `Reading your receipt… ${progress}%`
+              ? "Reading your receipt…"
               : status === "creating"
                 ? "Starting your bill…"
                 : "Scan a receipt"}
