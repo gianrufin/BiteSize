@@ -9,7 +9,7 @@ create table sessions (
   name text,
   venue_name text,
   receipt_image_url text,
-  currency text not null default 'USD',
+  currency text not null default 'PHP',
   subtotal_cents integer not null default 0,
   tax_cents integer not null default 0,
   service_charge_cents integer not null default 0,

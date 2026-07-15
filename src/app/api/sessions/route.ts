@@ -22,6 +22,7 @@ export async function POST(request: Request) {
         payer_device_token: deviceToken,
         name: name || null,
         status: "draft",
+        currency: "PHP",
       })
       .select("code")
       .single();

@@ -5,7 +5,7 @@ import { useState } from "react";
 export interface ItemFormValues {
   name: string;
   quantity: number;
-  priceDollars: string;
+  priceAmount: string;
 }
 
 export function ItemForm({
@@ -23,7 +23,7 @@ export function ItemForm({
 }) {
   const [name, setName] = useState(initial.name);
   const [quantity, setQuantity] = useState(String(initial.quantity));
-  const [priceDollars, setPriceDollars] = useState(initial.priceDollars);
+  const [priceAmount, setPriceAmount] = useState(initial.priceAmount);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +35,7 @@ export function ItemForm({
       await onSubmit({
         name,
         quantity: Number(quantity) || 1,
-        priceDollars,
+        priceAmount,
       });
     } catch {
       setError("Something went wrong — please try again.");
@@ -91,18 +91,21 @@ export function ItemForm({
           <label className="mb-1 block text-sm text-muted" htmlFor="item-price">
             Price each
           </label>
-          <input
-            id="item-price"
-            type="number"
-            min="0"
-            step="0.01"
-            inputMode="decimal"
-            value={priceDollars}
-            onChange={(e) => setPriceDollars(e.target.value)}
-            placeholder="0.00"
-            required
-            className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-text outline-none focus:border-accent"
-          />
+          <div className="flex items-center rounded-xl border border-border bg-bg pl-3 focus-within:border-accent">
+            <span className="text-muted">₱</span>
+            <input
+              id="item-price"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={priceAmount}
+              onChange={(e) => setPriceAmount(e.target.value)}
+              placeholder="0.00"
+              required
+              className="w-full bg-transparent px-2 py-2 text-text outline-none"
+            />
+          </div>
         </div>
       </div>
 

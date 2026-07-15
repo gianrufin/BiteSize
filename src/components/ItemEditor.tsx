@@ -43,7 +43,7 @@ export function ItemEditor({
       body: JSON.stringify({
         name: values.name,
         quantity: values.quantity,
-        unitPriceCents: Math.round(Number(values.priceDollars) * 100),
+        unitPriceCents: Math.round(Number(values.priceAmount) * 100),
       }),
     });
     if (!res.ok) throw new Error("Could not add item");
@@ -60,7 +60,7 @@ export function ItemEditor({
       body: JSON.stringify({
         name: values.name,
         quantity: values.quantity,
-        unitPriceCents: Math.round(Number(values.priceDollars) * 100),
+        unitPriceCents: Math.round(Number(values.priceAmount) * 100),
       }),
     });
     if (!res.ok) throw new Error("Could not update item");
@@ -101,7 +101,7 @@ export function ItemEditor({
               initial={{
                 name: item.name,
                 quantity: item.quantity,
-                priceDollars: (item.unitPriceCents / 100).toFixed(2),
+                priceAmount: (item.unitPriceCents / 100).toFixed(2),
               }}
               onSubmit={(values) => updateItem(item.id, values)}
               onCancel={() => setEditingItemId(null)}
@@ -116,7 +116,7 @@ export function ItemEditor({
       {isAdding ? (
         <ItemForm
           submitLabel="Add item"
-          initial={{ name: "", quantity: 1, priceDollars: "" }}
+          initial={{ name: "", quantity: 1, priceAmount: "" }}
           onSubmit={addItem}
           onCancel={() => setIsAdding(false)}
         />
