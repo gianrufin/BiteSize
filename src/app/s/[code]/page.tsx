@@ -8,6 +8,7 @@ import { ItemClaimList, type ClaimWithName } from "@/components/ItemClaimList";
 import { GCashNumberCard } from "@/components/GCashNumberCard";
 import { GCashPaymentInfo } from "@/components/GCashPaymentInfo";
 import { SettingsLink } from "@/components/SettingsLink";
+import { RealtimeSync } from "@/components/RealtimeSync";
 
 export default async function SessionPage({
   params,
@@ -71,6 +72,7 @@ export default async function SessionPage({
   if (isPayer) {
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
+        <RealtimeSync sessionId={session.id} />
         <div className="flex items-start justify-between">
           <Logo size={40} />
           <SettingsLink />
@@ -96,6 +98,7 @@ export default async function SessionPage({
         </div>
         <div className="mt-6">
           <ItemEditor
+            key={JSON.stringify(items)}
             session={{
               code: session.code,
               name: session.name,
@@ -120,6 +123,7 @@ export default async function SessionPage({
               What did you have?
             </h2>
             <ItemClaimList
+              key={JSON.stringify(items) + JSON.stringify(claimsWithNames)}
               sessionCode={session.code}
               items={items}
               initialClaims={claimsWithNames}
@@ -140,6 +144,7 @@ export default async function SessionPage({
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
+      <RealtimeSync sessionId={session.id} />
       <Logo size={40} />
       <h1 className="mt-6 text-2xl font-semibold text-text">
         {session.name ?? "Bill"}
@@ -156,6 +161,7 @@ export default async function SessionPage({
 
       <div className="mt-6">
         <ItemClaimList
+          key={JSON.stringify(items) + JSON.stringify(claimsWithNames)}
           sessionCode={session.code}
           items={items}
           initialClaims={claimsWithNames}

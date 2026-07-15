@@ -4,6 +4,7 @@ import { getDeviceToken } from "@/lib/session/deviceToken";
 import { mapItemRow, mapItemClaimRow, mapParticipantRow } from "@/lib/mappers";
 import { Logo } from "@/components/Logo";
 import { SummaryView } from "@/components/SummaryView";
+import { RealtimeSync } from "@/components/RealtimeSync";
 
 export default async function SummaryPage({
   params,
@@ -51,6 +52,7 @@ export default async function SummaryPage({
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
+      <RealtimeSync sessionId={session.id} />
       <div className="flex items-center justify-between">
         <Logo size={40} />
         <a href={`/s/${session.code}`} className="text-sm font-medium text-accent">
@@ -63,6 +65,7 @@ export default async function SummaryPage({
 
       <div className="mt-6">
         <SummaryView
+          key={`${session.status}-${session.tax_cents}-${session.service_charge_cents}-${session.tip_cents}-${session.discount_cents}-${JSON.stringify(items)}-${JSON.stringify(claims)}-${JSON.stringify(participants)}`}
           sessionCode={session.code}
           initialSession={{
             name: session.name,
