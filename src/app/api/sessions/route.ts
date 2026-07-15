@@ -2,10 +2,20 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { generateSessionCode } from "@/lib/session/code";
 import { getOrCreateDeviceToken } from "@/lib/session/deviceToken";
+import { isValidGcashNumber, normalizeGcashNumber } from "@/lib/validation/gcash";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const name = typeof body?.name === "string" ? body.name.trim() : "";
+
+  // Prefilled from the device's saved default (Settings) — invalid or missing just
+  // means the bill starts with no GCash number set, not a failed creation.
+  const rawGcashNumber =
+    typeof body?.gcashNumber === "string" ? body.gcashNumber.trim() : "";
+  const gcashNumber =
+    rawGcashNumber && isValidGcashNumber(rawGcashNumber)
+      ? normalizeGcashNumber(rawGcashNumber)
+      : null;
 
   const deviceToken = await getOrCreateDeviceToken();
   const supabase = createServerSupabaseClient();
@@ -21,6 +31,7 @@ export async function POST(request: Request) {
         code,
         payer_device_token: deviceToken,
         name: name || null,
+        gcash_number: gcashNumber,
         status: "draft",
         currency: "PHP",
       })

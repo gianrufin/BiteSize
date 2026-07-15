@@ -11,6 +11,53 @@
   --muted: #8b887e;
   --border: #ece7db;
   --amber: #c68a2e;
+  color-scheme: light;
+}
+
+/* "System" (no explicit override yet) follows the OS. */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    --bg: #1c1a16;
+    --surface: #26231d;
+    --surface-muted: #2e2a22;
+    --accent: #93a87a;
+    --accent-foreground: #1c1a16;
+    --accent-soft: #39402f;
+    --text: #f3f1ea;
+    --muted: #a39e90;
+    --border: #3a362d;
+    --amber: #d9a44e;
+    color-scheme: dark;
+  }
+}
+
+/* Explicit user choice always wins over the OS preference, in either direction. */
+html[data-theme="light"] {
+  --bg: #f7f5ef;
+  --surface: #ffffff;
+  --surface-muted: #f1eee3;
+  --accent: #7c9066;
+  --accent-foreground: #ffffff;
+  --accent-soft: #e4e9d8;
+  --text: #292620;
+  --muted: #8b887e;
+  --border: #ece7db;
+  --amber: #c68a2e;
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  --bg: #1c1a16;
+  --surface: #26231d;
+  --surface-muted: #2e2a22;
+  --accent: #93a87a;
+  --accent-foreground: #1c1a16;
+  --accent-soft: #39402f;
+  --text: #f3f1ea;
+  --muted: #a39e90;
+  --border: #3a362d;
+  --amber: #d9a44e;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -31,4 +78,5 @@
 body {
   background: var(--bg);
   color: var(--text);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }

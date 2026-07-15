@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getDeviceToken } from "@/lib/session/deviceToken";
 import { recomputeSessionTotals } from "@/lib/session/recomputeTotals";
 import { mapSessionRow } from "@/lib/mappers";
+import { isValidGcashNumber, normalizeGcashNumber } from "@/lib/validation/gcash";
 import type { Database } from "@/types/database";
 
 type SessionUpdate = Database["public"]["Tables"]["sessions"]["Update"];
@@ -45,16 +46,15 @@ export async function PATCH(
   if ("gcashNumber" in body) {
     const rawGcashNumber =
       typeof body.gcashNumber === "string" ? body.gcashNumber.trim() : "";
-    const gcashNumber = rawGcashNumber || null;
 
-    if (gcashNumber && !/^09\d{9}$/.test(gcashNumber.replace(/[\s-]/g, ""))) {
+    if (rawGcashNumber && !isValidGcashNumber(rawGcashNumber)) {
       return NextResponse.json(
         { error: "Enter an 11-digit GCash mobile number, e.g. 09171234567" },
         { status: 400 },
       );
     }
 
-    update.gcash_number = gcashNumber ? gcashNumber.replace(/[\s-]/g, "") : null;
+    update.gcash_number = rawGcashNumber ? normalizeGcashNumber(rawGcashNumber) : null;
   }
 
   const chargeFields = [

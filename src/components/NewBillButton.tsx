@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { getDeviceSettings } from "@/lib/session/settings";
 
 export function NewBillButton() {
   const router = useRouter();
@@ -15,7 +16,9 @@ export function NewBillButton() {
       const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          gcashNumber: getDeviceSettings().defaultGcashNumber ?? undefined,
+        }),
       });
       if (!res.ok) throw new Error("Could not start a new bill");
       const { code } = await res.json();

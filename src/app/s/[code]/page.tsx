@@ -7,6 +7,7 @@ import { ItemEditor } from "@/components/ItemEditor";
 import { ItemClaimList, type ClaimWithName } from "@/components/ItemClaimList";
 import { GCashNumberCard } from "@/components/GCashNumberCard";
 import { GCashPaymentInfo } from "@/components/GCashPaymentInfo";
+import { SettingsLink } from "@/components/SettingsLink";
 
 export default async function SessionPage({
   params,
@@ -69,7 +70,10 @@ export default async function SessionPage({
   if (isPayer) {
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
-        <Logo size={40} />
+        <div className="flex items-start justify-between">
+          <Logo size={40} />
+          <SettingsLink />
+        </div>
         <div className="mt-6 flex items-start justify-between gap-3">
           <h1 className="text-2xl font-semibold text-text">
             {session.name ?? "New bill"}
