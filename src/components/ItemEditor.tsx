@@ -3,9 +3,14 @@
 import { useEffect, useState } from "react";
 import { formatCents } from "@/lib/format";
 import { upsertRecentBill } from "@/lib/session/recentBills";
+import { findDuplicateItems } from "@/lib/items/findDuplicateItems";
 import { ItemForm, type ItemFormValues } from "@/components/ItemForm";
 import { ItemRow } from "@/components/ItemRow";
 import type { Item } from "@/types";
+
+function pairKey(idA: string, idB: string): string {
+  return [idA, idB].sort().join(":");
+}
 
 export interface EditableSessionSummary {
   code: string;
@@ -28,6 +33,12 @@ export function ItemEditor({
   const [items, setItems] = useState(initialItems);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [dismissedPairs, setDismissedPairs] = useState<Set<string>>(new Set());
+  const [mergingPairKey, setMergingPairKey] = useState<string | null>(null);
+
+  const duplicatePairs = findDuplicateItems(items).filter(
+    (pair) => !dismissedPairs.has(pairKey(pair.a.id, pair.b.id)),
+  );
 
   useEffect(() => {
     upsertRecentBill({
@@ -85,6 +96,45 @@ export function ItemEditor({
     setEditingItemId(null);
   }
 
+  async function mergeItems(keep: Item, remove: Item) {
+    const key = pairKey(keep.id, remove.id);
+    setMergingPairKey(key);
+    try {
+      const mergedQuantity = keep.quantity + remove.quantity;
+      const mergedTotalCents = keep.totalPriceCents + remove.totalPriceCents;
+      const mergedUnitPriceCents = Math.round(mergedTotalCents / mergedQuantity);
+
+      const patchRes = await fetch(`/api/sessions/${session.code}/items/${keep.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quantity: mergedQuantity,
+          unitPriceCents: mergedUnitPriceCents,
+        }),
+      });
+      if (!patchRes.ok) throw new Error("Could not merge items");
+      const { item: mergedItem } = await patchRes.json();
+
+      const deleteRes = await fetch(
+        `/api/sessions/${session.code}/items/${remove.id}`,
+        { method: "DELETE" },
+      );
+      if (!deleteRes.ok) throw new Error("Could not merge items");
+      const { session: updatedSession } = await deleteRes.json();
+
+      setItems((prev) =>
+        prev
+          .filter((existing) => existing.id !== remove.id)
+          .map((existing) => (existing.id === mergedItem.id ? mergedItem : existing)),
+      );
+      setSession(updatedSession);
+    } catch {
+      // Best-effort — the suggestion banner just stays up so they can retry.
+    } finally {
+      setMergingPairKey(null);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="card p-4">
@@ -99,6 +149,43 @@ export function ItemEditor({
           {formatCents(session.grandTotalCents, session.currency)}
         </p>
       </div>
+
+      {!isLocked && duplicatePairs.length > 0
+        ? duplicatePairs.map((pair) => {
+            const key = pairKey(pair.a.id, pair.b.id);
+            const isMerging = mergingPairKey === key;
+            return (
+              <div
+                key={key}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-amber/40 bg-surface p-4"
+              >
+                <p className="text-sm text-text">
+                  <span className="font-medium">{pair.a.name}</span> and{" "}
+                  <span className="font-medium">{pair.b.name}</span> look like the
+                  same item — merge them?
+                </p>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    disabled={isMerging}
+                    onClick={() => setDismissedPairs((prev) => new Set(prev).add(key))}
+                    className="rounded-lg px-2 py-1 text-sm font-medium text-muted disabled:opacity-60"
+                  >
+                    Dismiss
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isMerging}
+                    onClick={() => mergeItems(pair.a, pair.b)}
+                    className="rounded-lg px-2 py-1 text-sm font-medium text-accent disabled:opacity-60"
+                  >
+                    {isMerging ? "Merging…" : "Merge"}
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        : null}
 
       {items.length === 0 && !isAdding ? (
         <div className="rounded-2xl border border-dashed border-border py-8 text-center">
