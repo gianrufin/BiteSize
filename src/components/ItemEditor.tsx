@@ -4,7 +4,7 @@ import { useState } from "react";
 import { formatCents } from "@/lib/format";
 import { findDuplicateItems } from "@/lib/items/findDuplicateItems";
 import { ItemForm, type ItemFormValues } from "@/components/ItemForm";
-import { ItemRow } from "@/components/ItemRow";
+import { ItemRow, LOW_CONFIDENCE_THRESHOLD } from "@/components/ItemRow";
 import { TrackRecentBill } from "@/components/TrackRecentBill";
 import type { Item } from "@/types";
 
@@ -35,10 +35,18 @@ export function ItemEditor({
   const [isAdding, setIsAdding] = useState(false);
   const [dismissedPairs, setDismissedPairs] = useState<Set<string>>(new Set());
   const [mergingPairKey, setMergingPairKey] = useState<string | null>(null);
+  const [splittingItemId, setSplittingItemId] = useState<string | null>(null);
 
   const duplicatePairs = findDuplicateItems(items).filter(
     (pair) => !dismissedPairs.has(pairKey(pair.a.id, pair.b.id)),
   );
+
+  const reviewCount = items.filter(
+    (item) =>
+      item.source === "ocr" &&
+      item.ocrConfidence !== null &&
+      item.ocrConfidence < LOW_CONFIDENCE_THRESHOLD,
+  ).length;
 
   async function addItem(values: ItemFormValues) {
     const res = await fetch(`/api/sessions/${session.code}/items`, {
@@ -83,6 +91,49 @@ export function ItemEditor({
     setItems((prev) => prev.filter((existing) => existing.id !== itemId));
     setSession(updatedSession);
     setEditingItemId(null);
+  }
+
+  // For an OCR line that actually merged two different items together. Keeps
+  // the original item (renamed and re-priced to be "part 1") and adds a new
+  // one for "part 2" — quantity 1 each, splitting the total so nothing is
+  // lost, then hands editing straight to the new half so it can be renamed.
+  async function splitItem(item: Item) {
+    setSplittingItemId(item.id);
+    try {
+      const half1TotalCents = Math.ceil(item.totalPriceCents / 2);
+      const half2TotalCents = item.totalPriceCents - half1TotalCents;
+
+      const patchRes = await fetch(`/api/sessions/${session.code}/items/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity: 1, unitPriceCents: half1TotalCents }),
+      });
+      if (!patchRes.ok) throw new Error("Could not split item");
+      const { item: updatedFirstHalf } = await patchRes.json();
+
+      const postRes = await fetch(`/api/sessions/${session.code}/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: item.name,
+          quantity: 1,
+          unitPriceCents: half2TotalCents,
+        }),
+      });
+      if (!postRes.ok) throw new Error("Could not split item");
+      const { item: secondHalf, session: updatedSession } = await postRes.json();
+
+      setItems((prev) => [
+        ...prev.map((existing) => (existing.id === updatedFirstHalf.id ? updatedFirstHalf : existing)),
+        secondHalf,
+      ]);
+      setSession(updatedSession);
+      setEditingItemId(secondHalf.id);
+    } catch {
+      // Best-effort — the item just stays as one line if this fails.
+    } finally {
+      setSplittingItemId(null);
+    }
   }
 
   async function mergeItems(keep: Item, remove: Item) {
@@ -146,6 +197,18 @@ export function ItemEditor({
         </p>
       </div>
 
+      {reviewCount > 0 ? (
+        <div className="rounded-2xl border border-amber/40 bg-surface p-4">
+          <p className="text-sm font-medium text-amber">
+            Please review {reviewCount} item{reviewCount === 1 ? "" : "s"}
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            The scan wasn&apos;t fully confident about {reviewCount === 1 ? "this one" : "these"}{" "}
+            — tap to check the name and price.
+          </p>
+        </div>
+      ) : null}
+
       {!isLocked && duplicatePairs.length > 0
         ? duplicatePairs.map((pair) => {
             const key = pairKey(pair.a.id, pair.b.id);
@@ -206,6 +269,8 @@ export function ItemEditor({
                 onSubmit={(values) => updateItem(item.id, values)}
                 onCancel={() => setEditingItemId(null)}
                 onDelete={() => deleteItem(item.id)}
+                onSplit={() => splitItem(item)}
+                isSplitting={splittingItemId === item.id}
               />
             ) : (
               <ItemRow

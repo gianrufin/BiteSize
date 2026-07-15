@@ -16,6 +16,8 @@ export function ItemForm({
   onSubmit,
   onCancel,
   onDelete,
+  onSplit,
+  isSplitting = false,
 }: {
   initial: ItemFormValues;
   submitLabel: string;
@@ -23,6 +25,8 @@ export function ItemForm({
   onSubmit: (values: ItemFormValues) => Promise<void>;
   onCancel: () => void;
   onDelete?: () => Promise<void>;
+  onSplit?: () => Promise<void>;
+  isSplitting?: boolean;
 }) {
   const [name, setName] = useState(initial.name);
   const [quantity, setQuantity] = useState(String(initial.quantity));
@@ -166,6 +170,17 @@ export function ItemForm({
           </button>
         ) : null}
       </div>
+
+      {onSplit ? (
+        <button
+          type="button"
+          onClick={onSplit}
+          disabled={isSubmitting || isSplitting}
+          className="text-center text-sm font-medium text-accent disabled:opacity-60"
+        >
+          {isSplitting ? "Splitting…" : "Split into two items"}
+        </button>
+      ) : null}
     </form>
   );
 }

@@ -95,6 +95,9 @@ export async function PATCH(
       quantity: nextQuantity,
       unit_price_cents: nextUnitPriceCents,
       total_price_cents: nextTotalPriceCents,
+      // A manual edit means the payer has looked at and confirmed/corrected
+      // this line, so it no longer needs to be flagged for review.
+      ocr_confidence: null,
     })
     .eq("id", itemId)
     .select("*")

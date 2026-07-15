@@ -1,7 +1,7 @@
 import { formatCents } from "@/lib/format";
 import type { Item } from "@/types";
 
-const LOW_CONFIDENCE_THRESHOLD = 0.6;
+export const LOW_CONFIDENCE_THRESHOLD = 0.6;
 
 export function ItemRow({
   item,
