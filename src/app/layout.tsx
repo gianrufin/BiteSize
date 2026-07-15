@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,6 +17,22 @@ export const metadata: Metadata = {
   title: "BiteSize — Split it fair. Pay it easy.",
   description:
     "Scan a receipt, share a QR code, and let everyone claim what they ordered. BiteSize splits the bill automatically.",
+  appleWebApp: {
+    capable: true,
+    title: "BiteSize",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f5ef" },
+    { media: "(prefers-color-scheme: dark)", color: "#1c1a16" },
+  ],
 };
 
 // Runs before paint so an explicit Light/Dark choice applies immediately, instead
@@ -47,7 +64,10 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ServiceWorkerRegister />
+        {children}
+      </body>
     </html>
   );
 }

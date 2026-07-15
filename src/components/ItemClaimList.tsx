@@ -52,8 +52,20 @@ export function ItemClaimList({
   const myShareCents =
     split.allocations.find((a) => a.participantId === currentParticipantId)?.totalCents ?? 0;
 
+  // Optimistic: the checkbox flips the instant you tap it, before the request
+  // resolves. Pending-disable still guards against a double-tap firing two
+  // requests; failure rolls the local state back and surfaces an error.
   async function claimItem(itemId: string, markShared = false) {
     setError(null);
+    const optimisticClaim = {
+      itemId,
+      participantId: currentParticipantId,
+      participantName: "You",
+    };
+    setClaims((prev) => [...prev, optimisticClaim]);
+    if (markShared) {
+      setSharedItemIds((prev) => new Set(prev).add(itemId));
+    }
     setPendingItemId(itemId);
     try {
       const res = await fetch(`/api/sessions/${sessionCode}/claims`, {
@@ -63,14 +75,8 @@ export function ItemClaimList({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Could not claim item");
-      setClaims((prev) => [
-        ...prev,
-        { itemId, participantId: currentParticipantId, participantName: "You" },
-      ]);
-      if (markShared) {
-        setSharedItemIds((prev) => new Set(prev).add(itemId));
-      }
     } catch (err) {
+      setClaims((prev) => prev.filter((c) => c !== optimisticClaim));
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setPendingItemId(null);
@@ -79,18 +85,22 @@ export function ItemClaimList({
 
   async function unclaimItem(itemId: string) {
     setError(null);
+    const removedClaim = claims.find(
+      (c) => c.itemId === itemId && c.participantId === currentParticipantId,
+    );
+    setClaims((prev) =>
+      prev.filter(
+        (c) => !(c.itemId === itemId && c.participantId === currentParticipantId),
+      ),
+    );
     setPendingItemId(itemId);
     try {
       const res = await fetch(`/api/sessions/${sessionCode}/claims/${itemId}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Could not unclaim item");
-      setClaims((prev) =>
-        prev.filter(
-          (c) => !(c.itemId === itemId && c.participantId === currentParticipantId),
-        ),
-      );
     } catch {
+      if (removedClaim) setClaims((prev) => [...prev, removedClaim]);
       setError("Something went wrong");
     } finally {
       setPendingItemId(null);

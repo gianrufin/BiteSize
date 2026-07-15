@@ -4,7 +4,7 @@ import { getDeviceToken } from "@/lib/session/deviceToken";
 import { recomputeSessionTotals } from "@/lib/session/recomputeTotals";
 import { mapItemRow, mapSessionRow } from "@/lib/mappers";
 import { lockedResponse } from "@/lib/session/locking";
-import { extractReceiptItems } from "@/lib/ai/receiptVision";
+import { extractReceipt } from "@/lib/ai/receiptVision";
 
 export const maxDuration = 60;
 
@@ -50,7 +50,7 @@ export async function POST(
 
   let extracted;
   try {
-    extracted = await extractReceiptItems(
+    extracted = await extractReceipt(
       imageBase64,
       mediaType as "image/jpeg" | "image/png" | "image/webp",
     );
@@ -61,7 +61,7 @@ export async function POST(
     );
   }
 
-  const validItems = extracted.filter(
+  const validItems = extracted.items.filter(
     (item) =>
       item.name.trim().length > 0 &&
       Number.isFinite(item.quantity) &&
@@ -69,6 +69,17 @@ export async function POST(
       Number.isFinite(item.unitPriceCents) &&
       item.unitPriceCents >= 0,
   );
+
+  const chargesUpdate: { tax_cents?: number; service_charge_cents?: number } = {};
+  if (extracted.taxCents !== null && extracted.taxCents > 0) {
+    chargesUpdate.tax_cents = extracted.taxCents;
+  }
+  if (extracted.serviceChargeCents !== null && extracted.serviceChargeCents > 0) {
+    chargesUpdate.service_charge_cents = extracted.serviceChargeCents;
+  }
+  if (Object.keys(chargesUpdate).length > 0) {
+    await supabase.from("sessions").update(chargesUpdate).eq("id", session.id);
+  }
 
   if (validItems.length === 0) {
     const updatedSession = await recomputeSessionTotals(session.id);

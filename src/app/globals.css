@@ -112,6 +112,25 @@ body {
   background-attachment: fixed;
   color: var(--text);
   transition: background-color 0.15s ease, color 0.15s ease;
+  /* Installed as a standalone PWA with a translucent status bar (see layout.tsx
+     appleWebApp config), so content needs its own clearance from the notch /
+     status bar and the home-indicator area rather than relying on the browser. */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Mobile browsers still add a ~300ms delay before firing click on elements
+   that might be double-tap-to-zoom targets, and Android/iOS paint a gray/blue
+   flash on tap by default — both read as "lag" on buttons and checkboxes even
+   though the app itself responded instantly. */
+button,
+a,
+[role="button"],
+input[type="checkbox"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @layer utilities {

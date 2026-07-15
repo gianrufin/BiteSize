@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { startTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
@@ -25,7 +25,7 @@ export function RealtimeSync({ sessionId }: { sessionId: string }) {
           table: "items",
           filter: `session_id=eq.${sessionId}`,
         },
-        () => router.refresh(),
+        () => startTransition(() => router.refresh()),
       )
       .on(
         "postgres_changes",
@@ -35,12 +35,12 @@ export function RealtimeSync({ sessionId }: { sessionId: string }) {
           table: "participants",
           filter: `session_id=eq.${sessionId}`,
         },
-        () => router.refresh(),
+        () => startTransition(() => router.refresh()),
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "item_claims" },
-        () => router.refresh(),
+        () => startTransition(() => router.refresh()),
       )
       .subscribe();
 
