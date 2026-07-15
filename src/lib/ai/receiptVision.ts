@@ -16,8 +16,6 @@ const RawReceiptItemSchema = z.object({
 
 const RawReceiptSchema = z.object({
   items: z.array(RawReceiptItemSchema),
-  tax: z.number().nullable(),
-  serviceCharge: z.number().nullable(),
   currencyCode: z.string().nullable(),
 });
 
@@ -30,8 +28,6 @@ export interface ExtractedReceiptItem {
 
 export interface ExtractedReceipt {
   items: ExtractedReceiptItem[];
-  taxCents: number | null;
-  serviceChargeCents: number | null;
   currencyCode: string | null;
 }
 
@@ -50,27 +46,16 @@ For each item:
 - confidence: your own 0–1 confidence in this line's accuracy. Lower it for anything
   illegible, ambiguous, or guessed.
 
-Also look for a separate tax line (e.g. "VAT", "Tax", "GST") and a separate service
-charge line, if the receipt prints them as their own line items rather than folding
-them into item prices:
-- tax: the printed tax amount as a plain decimal number, or null if there isn't one.
-- serviceCharge: the printed service charge amount as a plain decimal number, or null
-  if there isn't one.
-
 Also identify the currency the receipt is printed in from its symbol, code, or
 context (e.g. "₱" or "PHP" → "PHP", "$" in a US context → "USD", "€" → "EUR"):
 - currencyCode: the ISO 4217 three-letter currency code, or null if you can't tell.
 
 If the image contains no readable receipt, return an empty items array and null for
-tax, serviceCharge, and currencyCode.
+currencyCode.
 
 Respond with JSON only, matching the given schema.`;
 
 type SupportedMediaType = "image/jpeg" | "image/png" | "image/webp";
-
-function toCents(amount: number | null): number | null {
-  return amount === null ? null : Math.round(amount * 100);
-}
 
 export async function extractReceipt(
   imageBase64: string,
@@ -95,12 +80,7 @@ export async function extractReceipt(
     },
   });
 
-  const empty: ExtractedReceipt = {
-    items: [],
-    taxCents: null,
-    serviceChargeCents: null,
-    currencyCode: null,
-  };
+  const empty: ExtractedReceipt = { items: [], currencyCode: null };
   if (!response.text) return empty;
 
   const parsed = RawReceiptSchema.safeParse(JSON.parse(response.text));
@@ -118,8 +98,6 @@ export async function extractReceipt(
       unitPriceCents: Math.round(item.unitPrice * 100),
       confidence: item.confidence,
     })),
-    taxCents: toCents(parsed.data.tax),
-    serviceChargeCents: toCents(parsed.data.serviceCharge),
     currencyCode,
   };
 }

@@ -70,22 +70,11 @@ export async function POST(
       item.unitPriceCents >= 0,
   );
 
-  const sessionUpdate: {
-    tax_cents?: number;
-    service_charge_cents?: number;
-    currency?: string;
-  } = {};
-  if (extracted.taxCents !== null && extracted.taxCents > 0) {
-    sessionUpdate.tax_cents = extracted.taxCents;
-  }
-  if (extracted.serviceChargeCents !== null && extracted.serviceChargeCents > 0) {
-    sessionUpdate.service_charge_cents = extracted.serviceChargeCents;
-  }
   if (extracted.currencyCode !== null) {
-    sessionUpdate.currency = extracted.currencyCode;
-  }
-  if (Object.keys(sessionUpdate).length > 0) {
-    await supabase.from("sessions").update(sessionUpdate).eq("id", session.id);
+    await supabase
+      .from("sessions")
+      .update({ currency: extracted.currencyCode })
+      .eq("id", session.id);
   }
 
   if (validItems.length === 0) {
