@@ -79,7 +79,7 @@ export function ChargesEditor({
   return (
     <form
       onSubmit={handleSave}
-      className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4"
+      className="flex flex-col gap-3 card p-4"
     >
       <div className="grid grid-cols-2 gap-3">
         <ChargeField label="Tax" value={tax} onChange={setTax} />
@@ -93,7 +93,7 @@ export function ChargesEditor({
       <button
         type="submit"
         disabled={isSaving}
-        className="rounded-xl bg-accent px-4 py-2 font-medium text-accent-foreground disabled:opacity-60"
+        className="btn-primary px-4 py-2 font-medium disabled:opacity-60"
       >
         {isSaving ? "Saving…" : "Save"}
       </button>

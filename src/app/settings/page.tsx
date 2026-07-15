@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getDeviceSettings, setDefaultGcashNumber } from "@/lib/session/settings";
 import { isValidGcashNumber } from "@/lib/validation/gcash";
-import { Logo } from "@/components/Logo";
+import { AppHeader } from "@/components/AppHeader";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function SettingsPage() {
@@ -37,19 +37,20 @@ export default function SettingsPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
-      <div className="flex items-center justify-between">
-        <Logo size={40} />
-        <Link href="/" className="text-sm font-medium text-accent">
-          ← Back
-        </Link>
-      </div>
+      <AppHeader
+        right={
+          <Link href="/" className="text-sm font-medium text-accent">
+            ← Back
+          </Link>
+        }
+      />
       <h1 className="mt-6 text-2xl font-semibold text-text">Settings</h1>
 
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-medium text-muted">Payment</h2>
         <form
           onSubmit={handleSave}
-          className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4"
+          className="flex flex-col gap-2 card p-4"
         >
           <label className="text-sm text-muted" htmlFor="default-gcash">
             Your GCash number
@@ -69,7 +70,7 @@ export default function SettingsPage() {
           {error ? <p className="text-sm text-amber">{error}</p> : null}
           <button
             type="submit"
-            className="mt-1 rounded-xl bg-accent px-4 py-2 font-medium text-accent-foreground"
+            className="mt-1 btn-primary px-4 py-2 font-medium"
           >
             {saved ? "Saved!" : "Save"}
           </button>

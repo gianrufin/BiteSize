@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getDeviceToken } from "@/lib/session/deviceToken";
 import { getBaseUrl } from "@/lib/session/baseUrl";
-import { Logo } from "@/components/Logo";
+import { AppHeader } from "@/components/AppHeader";
 import { QRCodeCard } from "@/components/QRCodeCard";
 import { JoinForm } from "@/components/JoinForm";
 
@@ -20,9 +20,9 @@ export default async function JoinPage({
 
   if (!session) {
     return (
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-5 text-center">
-        <Logo size={40} />
-        <p className="mt-6 text-text">This bill link doesn&apos;t exist or has expired.</p>
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12 text-center">
+        <AppHeader />
+        <p className="mt-10 text-text">This bill link doesn&apos;t exist or has expired.</p>
       </main>
     );
   }
@@ -46,7 +46,7 @@ export default async function JoinPage({
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
-      <Logo size={40} />
+      <AppHeader />
       <h1 className="mt-6 text-2xl font-semibold text-text">
         {session.name ?? "Join this bill"}
       </h1>
@@ -56,14 +56,14 @@ export default async function JoinPage({
       </div>
 
       {isPayer ? (
-        <div className="mt-4 rounded-2xl border border-border bg-surface p-4 text-center">
+        <div className="mt-4 card p-4 text-center">
           <p className="text-sm text-muted">You created this bill.</p>
           <a href={`/s/${session.code}`} className="mt-2 inline-block font-medium text-accent">
             Go to your bill →
           </a>
         </div>
       ) : alreadyJoinedName ? (
-        <div className="mt-4 rounded-2xl border border-border bg-surface p-4 text-center">
+        <div className="mt-4 card p-4 text-center">
           <p className="text-sm text-muted">
             You&apos;ve already joined as {alreadyJoinedName}.
           </p>

@@ -21,9 +21,9 @@ export function ItemRow({
     <button
       onClick={onEdit}
       disabled={readOnly}
-      className="flex w-full items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 text-left transition hover:bg-surface-muted disabled:hover:bg-surface"
+      className="flex w-full items-center gap-3 card px-4 py-3 text-left transition hover:bg-surface-muted disabled:hover:bg-surface"
     >
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-medium text-accent">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full icon-well text-sm font-medium text-accent">
         {item.quantity}
       </div>
       <div className="flex-1">

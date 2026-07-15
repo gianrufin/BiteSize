@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getDeviceToken } from "@/lib/session/deviceToken";
 import { mapItemRow, mapItemClaimRow, mapParticipantRow } from "@/lib/mappers";
-import { Logo } from "@/components/Logo";
+import { AppHeader } from "@/components/AppHeader";
 import { SummaryView } from "@/components/SummaryView";
 import { RealtimeSync } from "@/components/RealtimeSync";
 
@@ -53,12 +53,13 @@ export default async function SummaryPage({
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
       <RealtimeSync sessionId={session.id} />
-      <div className="flex items-center justify-between">
-        <Logo size={40} />
-        <a href={`/s/${session.code}`} className="text-sm font-medium text-accent">
-          ← Back
-        </a>
-      </div>
+      <AppHeader
+        right={
+          <a href={`/s/${session.code}`} className="text-sm font-medium text-accent">
+            ← Back
+          </a>
+        }
+      />
       <h1 className="mt-6 text-2xl font-semibold text-text">
         {session.name ?? "Bill Summary"}
       </h1>

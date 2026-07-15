@@ -82,9 +82,9 @@ export function NewBillButton() {
       <button
         onClick={() => fileInputRef.current?.click()}
         disabled={isBusy}
-        className="flex w-full items-center gap-4 rounded-2xl border border-border bg-surface px-4 py-4 text-left transition hover:bg-surface-muted disabled:opacity-60"
+        className="flex w-full items-center gap-4 card px-4 py-4 text-left transition hover:bg-surface-muted disabled:opacity-60"
       >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl icon-well text-accent">
           <ScanIcon />
         </div>
         <div className="flex-1">

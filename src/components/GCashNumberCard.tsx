@@ -38,7 +38,7 @@ export function GCashNumberCard({
 
   if (!isEditing) {
     return (
-      <div className="flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-3">
+      <div className="flex items-center justify-between card px-4 py-3">
         <div>
           <p className="text-sm text-muted">GCash number</p>
           <p className="font-medium text-text">{gcashNumber}</p>
@@ -59,7 +59,7 @@ export function GCashNumberCard({
   return (
     <form
       onSubmit={handleSave}
-      className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4"
+      className="flex flex-col gap-2 card p-4"
     >
       <label className="text-sm text-muted" htmlFor="gcash-number">
         GCash number
@@ -80,7 +80,7 @@ export function GCashNumberCard({
         <button
           type="submit"
           disabled={isSaving}
-          className="flex-1 rounded-xl bg-accent px-4 py-2 font-medium text-accent-foreground disabled:opacity-60"
+          className="flex-1 btn-primary px-4 py-2 font-medium disabled:opacity-60"
         >
           {isSaving ? "Saving…" : "Save"}
         </button>

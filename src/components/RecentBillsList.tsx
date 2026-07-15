@@ -31,10 +31,10 @@ export function RecentBillsList() {
           <li key={bill.code}>
             <Link
               href={`/s/${bill.code}`}
-              className="flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-3 transition hover:bg-surface-muted"
+              className="flex items-center justify-between card px-4 py-3 transition hover:bg-surface-muted"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-accent">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full icon-well text-accent">
                   <ReceiptIcon />
                 </div>
                 <div>

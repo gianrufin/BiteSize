@@ -2,12 +2,11 @@ import { notFound, redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getDeviceToken } from "@/lib/session/deviceToken";
 import { mapItemRow, mapItemClaimRow, mapParticipantRow } from "@/lib/mappers";
-import { Logo } from "@/components/Logo";
+import { AppHeader } from "@/components/AppHeader";
 import { ItemEditor } from "@/components/ItemEditor";
 import { ItemClaimList, type ClaimWithName } from "@/components/ItemClaimList";
 import { GCashNumberCard } from "@/components/GCashNumberCard";
 import { GCashPaymentInfo } from "@/components/GCashPaymentInfo";
-import { SettingsLink } from "@/components/SettingsLink";
 import { RealtimeSync } from "@/components/RealtimeSync";
 
 export default async function SessionPage({
@@ -73,10 +72,7 @@ export default async function SessionPage({
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
         <RealtimeSync sessionId={session.id} />
-        <div className="flex items-start justify-between">
-          <Logo size={40} />
-          <SettingsLink />
-        </div>
+        <AppHeader />
         <div className="mt-6 flex items-start justify-between gap-3">
           <h1 className="text-2xl font-semibold text-text">
             {session.name ?? "New bill"}
@@ -84,13 +80,13 @@ export default async function SessionPage({
           <div className="flex shrink-0 gap-2">
             <a
               href={`/s/${session.code}/join`}
-              className="rounded-xl border border-border px-3 py-2 text-sm font-medium text-accent"
+              className="card px-3 py-2 text-sm font-medium text-accent"
             >
               Share
             </a>
             <a
               href={`/s/${session.code}/summary`}
-              className="rounded-xl bg-accent px-3 py-2 text-sm font-medium text-accent-foreground"
+              className="btn-primary px-3 py-2 text-sm font-medium"
             >
               Summary
             </a>
@@ -145,7 +141,7 @@ export default async function SessionPage({
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
       <RealtimeSync sessionId={session.id} />
-      <Logo size={40} />
+      <AppHeader />
       <h1 className="mt-6 text-2xl font-semibold text-text">
         {session.name ?? "Bill"}
       </h1>

@@ -115,7 +115,7 @@ export function ItemClaimList({
           return (
             <div
               key={item.id}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3"
+              className="flex items-center gap-3 card px-4 py-3"
             >
               <button
                 type="button"
@@ -166,7 +166,7 @@ export function ItemClaimList({
 
       {error ? <p className="text-sm text-amber">{error}</p> : null}
 
-      <div className="sticky bottom-4 rounded-2xl border border-border bg-surface p-4 text-center shadow-sm">
+      <div className="sticky bottom-4 card-lg p-4 text-center">
         <p className="text-sm text-muted">You owe</p>
         <p className="text-3xl font-semibold text-text">{formatCents(myShareCents)}</p>
       </div>

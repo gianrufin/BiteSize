@@ -46,7 +46,7 @@ export function JoinForm({ code }: { code: string }) {
       <button
         type="submit"
         disabled={isJoining}
-        className="w-full rounded-xl bg-accent px-4 py-3 font-medium text-accent-foreground transition disabled:opacity-60"
+        className="w-full btn-primary px-4 py-3 font-medium disabled:opacity-60"
       >
         {isJoining ? "Joining…" : "Join Bill"}
       </button>

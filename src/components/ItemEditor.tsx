@@ -85,7 +85,7 @@ export function ItemEditor({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-2xl border border-border bg-surface p-4">
+      <div className="card p-4">
         {isLocked ? (
           <p className="mb-1 text-xs font-medium text-amber">🔒 This bill is locked</p>
         ) : null}

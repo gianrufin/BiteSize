@@ -63,7 +63,7 @@ export function ItemForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4"
+      className="flex flex-col gap-3 card p-4"
     >
       <div>
         <label className="mb-1 block text-sm text-muted" htmlFor="item-name">
@@ -139,7 +139,7 @@ export function ItemForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex-1 rounded-xl bg-accent px-4 py-2 font-medium text-accent-foreground transition disabled:opacity-60"
+          className="flex-1 btn-primary px-4 py-2 font-medium disabled:opacity-60"
         >
           {submitLabel}
         </button>

@@ -9,7 +9,7 @@ export async function QRCodeCard({ url }: { url: string }) {
   });
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5">
+    <div className="card p-5">
       <p className="mb-1 font-medium text-text">Share this bill</p>
       <p className="mb-4 text-sm text-muted">
         Ask your friends to scan or open the link to join and claim their items.

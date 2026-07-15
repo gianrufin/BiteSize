@@ -95,7 +95,7 @@ export function SummaryView({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-2xl border border-border bg-surface p-5 text-center">
+      <div className="card p-5 text-center">
         {isLocked ? (
           <p className="mb-1 text-xs font-medium text-amber">🔒 Locked</p>
         ) : null}
@@ -133,7 +133,7 @@ export function SummaryView({
       ) : null}
 
       {isLocked ? (
-        <div className="rounded-2xl border border-border bg-surface p-4 text-center text-sm text-muted">
+        <div className="card p-4 text-center text-sm text-muted">
           Charges are locked. Unlock the bill to make changes.
         </div>
       ) : (
@@ -163,17 +163,17 @@ export function SummaryView({
             return (
               <div
                 key={participant.id}
-                className="flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-3"
+                className="flex items-center justify-between card px-4 py-3"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-medium text-accent">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full icon-well text-sm font-medium text-accent">
                     {participant.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <p className="font-medium text-text">
                       {isPayer ? "You" : participant.name}
                       {isPayer ? (
-                        <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
+                        <span className="ml-2 rounded-full icon-well px-2 py-0.5 text-xs font-medium text-accent">
                           Payer
                         </span>
                       ) : null}
@@ -190,7 +190,7 @@ export function SummaryView({
 
       <div>
         <h2 className="mb-3 text-sm font-medium text-muted">Breakdown</h2>
-        <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4">
+        <div className="flex flex-col gap-2 card p-4">
           <BreakdownRow label="Items" cents={session.subtotalCents} />
           {session.taxCents > 0 ? <BreakdownRow label="Tax" cents={session.taxCents} /> : null}
           {session.serviceChargeCents > 0 ? (
