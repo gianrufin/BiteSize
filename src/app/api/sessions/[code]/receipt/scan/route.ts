@@ -8,12 +8,7 @@ import { extractReceiptItems } from "@/lib/ai/receiptVision";
 
 export const maxDuration = 60;
 
-const SUPPORTED_MEDIA_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
+const SUPPORTED_MEDIA_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function POST(
   request: Request,
@@ -57,7 +52,7 @@ export async function POST(
   try {
     extracted = await extractReceiptItems(
       imageBase64,
-      mediaType as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
+      mediaType as "image/jpeg" | "image/png" | "image/webp",
     );
   } catch (err) {
     return NextResponse.json(

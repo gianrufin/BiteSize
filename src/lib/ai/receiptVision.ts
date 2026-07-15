@@ -1,8 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 
-const MODEL = "claude-sonnet-5";
+const MODEL = "gemini-2.5-flash";
 
 const ReceiptItemSchema = z.object({
   name: z.string(),
@@ -30,33 +29,37 @@ For each item:
 - confidence: your own 0–1 confidence in this line's accuracy. Lower it for anything
   illegible, ambiguous, or guessed.
 
-If the image contains no readable receipt, return an empty items array.`;
+If the image contains no readable receipt, return an empty items array.
 
-type SupportedMediaType = "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+Respond with JSON only, matching the given schema.`;
+
+type SupportedMediaType = "image/jpeg" | "image/png" | "image/webp";
 
 export async function extractReceiptItems(
   imageBase64: string,
   mediaType: SupportedMediaType,
 ): Promise<ExtractedReceiptItem[]> {
-  const client = new Anthropic();
+  const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-  const response = await client.messages.parse({
+  const response = await client.models.generateContent({
     model: MODEL,
-    max_tokens: 4096,
-    messages: [
+    contents: [
       {
         role: "user",
-        content: [
-          {
-            type: "image",
-            source: { type: "base64", media_type: mediaType, data: imageBase64 },
-          },
-          { type: "text", text: PROMPT },
+        parts: [
+          { text: PROMPT },
+          { inlineData: { mimeType: mediaType, data: imageBase64 } },
         ],
       },
     ],
-    output_config: { format: zodOutputFormat(ReceiptSchema) },
+    config: {
+      responseMimeType: "application/json",
+      responseJsonSchema: z.toJSONSchema(ReceiptSchema),
+    },
   });
 
-  return response.parsed_output?.items ?? [];
+  if (!response.text) return [];
+
+  const parsed = ReceiptSchema.safeParse(JSON.parse(response.text));
+  return parsed.success ? parsed.data.items : [];
 }
