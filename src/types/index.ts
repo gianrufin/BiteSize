@@ -1,6 +1,7 @@
 export type SessionStatus = "draft" | "open" | "locked";
 export type ItemSource = "ocr" | "manual";
 export type SplitMode = "items" | "even";
+export type PaymentStatus = "unpaid" | "submitted" | "confirmed";
 
 export interface Session {
   id: string;
@@ -11,6 +12,7 @@ export interface Session {
   venueName: string | null;
   receiptImageUrl: string | null;
   gcashNumber: string | null;
+  gcashQrUrl: string | null;
   currency: string;
   splitMode: SplitMode;
   subtotalCents: number;
@@ -42,6 +44,8 @@ export interface Participant {
   name: string;
   deviceToken: string;
   isPayer: boolean;
+  paymentStatus: PaymentStatus;
+  paymentProofUrl: string | null;
   joinedAt: string;
 }
 

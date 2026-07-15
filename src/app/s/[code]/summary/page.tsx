@@ -85,6 +85,8 @@ export default async function SummaryPage({
             id: p.id,
             name: p.name,
             isPayer: p.isPayer,
+            paymentStatus: p.paymentStatus,
+            paymentProofUrl: p.paymentProofUrl,
           }))}
           claims={claims.map((c) => ({
             itemId: c.itemId,

@@ -11,6 +11,7 @@ export interface Database {
           venue_name: string | null;
           receipt_image_url: string | null;
           gcash_number: string | null;
+          gcash_qr_url: string | null;
           currency: string;
           split_mode: "items" | "even";
           subtotal_cents: number;
@@ -58,6 +59,8 @@ export interface Database {
           name: string;
           device_token: string;
           is_payer: boolean;
+          payment_status: "unpaid" | "submitted" | "confirmed";
+          payment_proof_url: string | null;
           joined_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["participants"]["Row"]> & {

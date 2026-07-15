@@ -16,6 +16,7 @@ export function mapSessionRow(row: SessionRow): Session {
     venueName: row.venue_name,
     receiptImageUrl: row.receipt_image_url,
     gcashNumber: row.gcash_number,
+    gcashQrUrl: row.gcash_qr_url,
     currency: row.currency,
     splitMode: row.split_mode,
     subtotalCents: row.subtotal_cents,
@@ -51,6 +52,8 @@ export function mapParticipantRow(row: ParticipantRow): Participant {
     name: row.name,
     deviceToken: row.device_token,
     isPayer: row.is_payer,
+    paymentStatus: row.payment_status,
+    paymentProofUrl: row.payment_proof_url,
     joinedAt: row.joined_at,
   };
 }

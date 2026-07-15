@@ -7,12 +7,14 @@ import { buildSummaryText } from "@/lib/session/summaryText";
 import { ChargesEditor } from "@/components/ChargesEditor";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { ExportSummaryImage } from "@/components/ExportSummaryImage";
-import type { Item, Session } from "@/types";
+import type { Item, PaymentStatus, Session } from "@/types";
 
 export interface SummaryParticipant {
   id: string;
   name: string;
   isPayer: boolean;
+  paymentStatus: PaymentStatus;
+  paymentProofUrl: string | null;
 }
 
 export interface SummaryClaim {
@@ -47,7 +49,33 @@ export function SummaryView({
 }) {
   const [session, setSession] = useState(initialSession);
   const [isTogglingLock, setIsTogglingLock] = useState(false);
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, PaymentStatus>>({});
   const isLocked = session.status === "locked";
+
+  function getPaymentStatus(participant: SummaryParticipant): PaymentStatus {
+    return statusOverrides[participant.id] ?? participant.paymentStatus;
+  }
+
+  async function setPaymentStatus(participantId: string, next: PaymentStatus) {
+    setStatusOverrides((prev) => ({ ...prev, [participantId]: next }));
+    try {
+      const res = await fetch(
+        `/api/sessions/${sessionCode}/participants/${participantId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentStatus: next }),
+        },
+      );
+      if (!res.ok) throw new Error("Could not update payment status");
+    } catch {
+      setStatusOverrides((prev) => {
+        const next = { ...prev };
+        delete next[participantId];
+        return next;
+      });
+    }
+  }
 
   async function toggleLock() {
     setIsTogglingLock(true);
@@ -109,6 +137,18 @@ export function SummaryView({
     session.currency,
   );
 
+  const nonPayerParticipants = participants.filter((p) => !p.isPayer);
+  const totalOwedCents = nonPayerParticipants.reduce(
+    (sum, p) => sum + (allocationByParticipantId.get(p.id)?.totalCents ?? 0),
+    0,
+  );
+  const collectedCents = nonPayerParticipants
+    .filter((p) => getPaymentStatus(p) === "confirmed")
+    .reduce((sum, p) => sum + (allocationByParticipantId.get(p.id)?.totalCents ?? 0), 0);
+  const pendingCount = nonPayerParticipants.filter(
+    (p) => getPaymentStatus(p) === "submitted",
+  ).length;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="card p-5 text-center">
@@ -119,6 +159,15 @@ export function SummaryView({
         <p className="text-4xl font-semibold text-text">
           {formatCents(session.grandTotalCents, session.currency)}
         </p>
+        {totalOwedCents > 0 ? (
+          <p className="mt-1 text-sm text-muted">
+            {formatCents(collectedCents, session.currency)} collected of{" "}
+            {formatCents(totalOwedCents, session.currency)}
+            {pendingCount > 0
+              ? ` · ${pendingCount} pending confirmation`
+              : ""}
+          </p>
+        ) : null}
         <div className="mt-3 flex flex-wrap justify-center gap-2">
           <CopyLinkButton
             text={summaryText}
@@ -183,30 +232,81 @@ export function SummaryView({
               ? session.grandTotalCents
               : (allocationByParticipantId.get(participant.id)?.totalCents ?? 0);
 
+            const paymentStatus = getPaymentStatus(participant);
+
             return (
-              <div
-                key={participant.id}
-                className="flex items-center justify-between card px-4 py-3"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full icon-well text-sm font-medium text-accent">
-                    {participant.name.charAt(0).toUpperCase()}
+              <div key={participant.id} className="card px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full icon-well text-sm font-medium text-accent">
+                      {participant.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-medium text-text">
+                        {isPayer ? "You" : participant.name}
+                        {isPayer ? (
+                          <span className="ml-2 rounded-full icon-well px-2 py-0.5 text-xs font-medium text-accent">
+                            Payer
+                          </span>
+                        ) : null}
+                      </p>
+                      {!isPayer ? <p className="text-xs text-muted">Owes you</p> : null}
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-text">
-                      {isPayer ? "You" : participant.name}
-                      {isPayer ? (
-                        <span className="ml-2 rounded-full icon-well px-2 py-0.5 text-xs font-medium text-accent">
-                          Payer
-                        </span>
-                      ) : null}
-                    </p>
-                    {!isPayer ? <p className="text-xs text-muted">Owes you</p> : null}
-                  </div>
+                  <span className="font-medium text-text">
+                    {formatCents(amountCents, session.currency)}
+                  </span>
                 </div>
-                <span className="font-medium text-text">
-                  {formatCents(amountCents, session.currency)}
-                </span>
+
+                {!isPayer ? (
+                  <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        paymentStatus === "confirmed"
+                          ? "icon-well text-accent"
+                          : paymentStatus === "submitted"
+                            ? "bg-amber/15 text-amber"
+                            : "text-muted"
+                      }`}
+                    >
+                      {paymentStatus === "confirmed"
+                        ? "✓ Paid"
+                        : paymentStatus === "submitted"
+                          ? "Payment sent"
+                          : "Unpaid"}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      {participant.paymentProofUrl ? (
+                        <a
+                          href={participant.paymentProofUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium text-accent"
+                        >
+                          View proof
+                        </a>
+                      ) : null}
+                      {paymentStatus === "submitted" ? (
+                        <button
+                          type="button"
+                          onClick={() => setPaymentStatus(participant.id, "confirmed")}
+                          className="text-sm font-medium text-accent"
+                        >
+                          Confirm
+                        </button>
+                      ) : null}
+                      {paymentStatus !== "unpaid" ? (
+                        <button
+                          type="button"
+                          onClick={() => setPaymentStatus(participant.id, "unpaid")}
+                          className="text-sm text-muted"
+                        >
+                          Reset
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             );
           })}

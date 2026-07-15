@@ -2,11 +2,13 @@ import { notFound, redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getDeviceToken } from "@/lib/session/deviceToken";
 import { mapItemRow, mapItemClaimRow, mapParticipantRow } from "@/lib/mappers";
+import { computeEvenSplit, computeSplit } from "@/lib/calculations/splitEngine";
 import { AppHeader } from "@/components/AppHeader";
 import { ItemEditor } from "@/components/ItemEditor";
 import { ItemClaimList, type ClaimWithName } from "@/components/ItemClaimList";
 import { GCashNumberCard } from "@/components/GCashNumberCard";
-import { GCashPaymentInfo } from "@/components/GCashPaymentInfo";
+import { GCashQrUpload } from "@/components/GCashQrUpload";
+import { PaymentPanel } from "@/components/PaymentPanel";
 import { RealtimeSync } from "@/components/RealtimeSync";
 import { SplitModeToggle } from "@/components/SplitModeToggle";
 import { NudgeParticipants } from "@/components/NudgeParticipants";
@@ -117,10 +119,14 @@ export default async function SessionPage({
           />
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-col gap-3">
           <GCashNumberCard
             sessionCode={session.code}
             initialGcashNumber={session.gcash_number}
+          />
+          <GCashQrUpload
+            sessionCode={session.code}
+            initialGcashQrUrl={session.gcash_qr_url}
           />
         </div>
 
@@ -162,6 +168,19 @@ export default async function SessionPage({
     redirect(`/s/${session.code}/join`);
   }
 
+  const myShareCents =
+    session.split_mode === "even"
+      ? (computeEvenSplit(charges.grandTotalCents, allParticipants).find(
+          (a) => a.participantId === currentParticipant.id,
+        )?.totalCents ?? 0)
+      : (computeSplit(
+          items.map((item) => ({ id: item.id, totalPriceCents: item.totalPriceCents })),
+          claims,
+          allParticipants,
+          charges,
+        ).allocations.find((a) => a.participantId === currentParticipant.id)?.totalCents ??
+        0);
+
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
       <RealtimeSync sessionId={session.id} />
@@ -173,11 +192,19 @@ export default async function SessionPage({
         You&apos;ve joined as {currentParticipant.name}
       </p>
 
-      {session.gcash_number ? (
-        <div className="mt-4">
-          <GCashPaymentInfo gcashNumber={session.gcash_number} />
-        </div>
-      ) : null}
+      <div className="mt-4">
+        <PaymentPanel
+          sessionCode={session.code}
+          participantId={currentParticipant.id}
+          billName={session.name ?? "Bill"}
+          amountCents={myShareCents}
+          currency={session.currency}
+          gcashNumber={session.gcash_number}
+          gcashQrUrl={session.gcash_qr_url}
+          initialPaymentStatus={currentParticipant.paymentStatus}
+          initialProofUrl={currentParticipant.paymentProofUrl}
+        />
+      </div>
 
       <div className="mt-6">
         <ItemClaimList
