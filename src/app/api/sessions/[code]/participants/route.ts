@@ -42,9 +42,26 @@ export async function POST(
   }
 
   const body = await request.json().catch(() => ({}));
-  const name = typeof body?.name === "string" ? body.name.trim() : "";
-  if (!name) {
+  const requestedName = typeof body?.name === "string" ? body.name.trim() : "";
+  if (!requestedName) {
     return NextResponse.json({ error: "Please enter your name" }, { status: 400 });
+  }
+
+  // Two participants can genuinely share a first name — device token is the
+  // real identity key, not the name string — but an unqualified duplicate is
+  // indistinguishable everywhere the name is displayed (claim chips, the
+  // payer's summary). Disambiguate by join order: "Alex", "Alex (2)", ...
+  const { data: existingNames } = await supabase
+    .from("participants")
+    .select("name")
+    .eq("session_id", session.id);
+
+  const takenNames = new Set((existingNames ?? []).map((p) => p.name.toLowerCase()));
+  let name = requestedName;
+  if (takenNames.has(name.toLowerCase())) {
+    let suffix = 2;
+    while (takenNames.has(`${requestedName} (${suffix})`.toLowerCase())) suffix++;
+    name = `${requestedName} (${suffix})`;
   }
 
   const { data: participant, error } = await supabase
