@@ -17,6 +17,7 @@ export function mapSessionRow(row: SessionRow): Session {
     receiptImageUrl: row.receipt_image_url,
     gcashNumber: row.gcash_number,
     currency: row.currency,
+    splitMode: row.split_mode,
     subtotalCents: row.subtotal_cents,
     taxCents: row.tax_cents,
     serviceChargeCents: row.service_charge_cents,

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { formatCents } from "@/lib/format";
-import { computeSplit } from "@/lib/calculations/splitEngine";
-import type { Item } from "@/types";
+import { computeEvenSplit, computeSplit } from "@/lib/calculations/splitEngine";
+import type { Item, SplitMode } from "@/types";
 
 export interface ClaimWithName {
   itemId: string;
@@ -27,6 +27,7 @@ export function ItemClaimList({
   allParticipants,
   charges,
   currency,
+  splitMode = "items",
   isBillLocked = false,
 }: {
   sessionCode: string;
@@ -36,6 +37,7 @@ export function ItemClaimList({
   allParticipants: { id: string; isPayer: boolean }[];
   charges: ClaimListCharges;
   currency: string;
+  splitMode?: SplitMode;
   isBillLocked?: boolean;
 }) {
   const [claims, setClaims] = useState(initialClaims);
@@ -45,6 +47,11 @@ export function ItemClaimList({
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const evenShareCents =
+    computeEvenSplit(charges.grandTotalCents, allParticipants).find(
+      (a) => a.participantId === currentParticipantId,
+    )?.totalCents ?? 0;
+
   const split = computeSplit(
     items.map((item) => ({ id: item.id, totalPriceCents: item.totalPriceCents })),
     claims.map((c) => ({ itemId: c.itemId, participantId: c.participantId })),
@@ -52,7 +59,28 @@ export function ItemClaimList({
     charges,
   );
   const myShareCents =
-    split.allocations.find((a) => a.participantId === currentParticipantId)?.totalCents ?? 0;
+    splitMode === "even"
+      ? evenShareCents
+      : (split.allocations.find((a) => a.participantId === currentParticipantId)
+          ?.totalCents ?? 0);
+
+  if (splitMode === "even") {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="card p-4 text-center text-sm text-muted">
+          This bill is split evenly among {allParticipants.length}{" "}
+          {allParticipants.length === 1 ? "person" : "people"} — no need to claim
+          individual items.
+        </div>
+        <div className="sticky bottom-4 card-lg p-4 text-center">
+          <p className="text-sm text-muted">You owe</p>
+          <p className="text-3xl font-semibold text-text">
+            {formatCents(myShareCents, currency)}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Optimistic: the checkbox flips the instant you tap it, before the request
   // resolves. Pending-disable still guards against a double-tap firing two

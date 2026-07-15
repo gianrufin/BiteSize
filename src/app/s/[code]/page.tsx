@@ -8,6 +8,8 @@ import { ItemClaimList, type ClaimWithName } from "@/components/ItemClaimList";
 import { GCashNumberCard } from "@/components/GCashNumberCard";
 import { GCashPaymentInfo } from "@/components/GCashPaymentInfo";
 import { RealtimeSync } from "@/components/RealtimeSync";
+import { SplitModeToggle } from "@/components/SplitModeToggle";
+import { NudgeParticipants } from "@/components/NudgeParticipants";
 
 export default async function SessionPage({
   params,
@@ -92,6 +94,14 @@ export default async function SessionPage({
             </a>
           </div>
         </div>
+        <div className="mt-4">
+          <SplitModeToggle
+            sessionCode={session.code}
+            initialSplitMode={session.split_mode}
+            disabled={isLocked}
+          />
+        </div>
+
         <div className="mt-6">
           <ItemEditor
             key={JSON.stringify(items)}
@@ -114,7 +124,7 @@ export default async function SessionPage({
           />
         </div>
 
-        {items.length > 0 && currentParticipant ? (
+        {(items.length > 0 || session.split_mode === "even") && currentParticipant ? (
           <div className="mt-8">
             <h2 className="mb-3 text-sm font-medium text-muted">
               What did you have?
@@ -128,7 +138,19 @@ export default async function SessionPage({
               allParticipants={allParticipants}
               charges={charges}
               currency={session.currency}
+              splitMode={session.split_mode}
               isBillLocked={isLocked}
+            />
+          </div>
+        ) : null}
+
+        {session.split_mode === "items" && items.length > 0 ? (
+          <div className="mt-4">
+            <NudgeParticipants
+              billName={session.name ?? "this bill"}
+              sessionCode={session.code}
+              participants={participants}
+              claims={claims}
             />
           </div>
         ) : null}
@@ -167,6 +189,7 @@ export default async function SessionPage({
           allParticipants={allParticipants}
           charges={charges}
           currency={session.currency}
+          splitMode={session.split_mode}
           isBillLocked={isLocked}
         />
       </div>

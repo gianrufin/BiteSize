@@ -72,6 +72,7 @@ export default async function SummaryPage({
             name: session.name,
             status: session.status,
             currency: session.currency,
+            splitMode: session.split_mode,
             subtotalCents: session.subtotal_cents,
             taxCents: session.tax_cents,
             serviceChargeCents: session.service_charge_cents,

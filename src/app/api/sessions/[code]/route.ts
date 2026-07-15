@@ -57,6 +57,16 @@ export async function PATCH(
     update.gcash_number = rawGcashNumber ? normalizeGcashNumber(rawGcashNumber) : null;
   }
 
+  if ("splitMode" in body) {
+    if (body.splitMode !== "items" && body.splitMode !== "even") {
+      return NextResponse.json(
+        { error: "splitMode must be 'items' or 'even'" },
+        { status: 400 },
+      );
+    }
+    update.split_mode = body.splitMode;
+  }
+
   const chargeFields = [
     ["taxCents", "tax_cents"],
     ["serviceChargeCents", "service_charge_cents"],

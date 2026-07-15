@@ -1,5 +1,6 @@
 export type SessionStatus = "draft" | "open" | "locked";
 export type ItemSource = "ocr" | "manual";
+export type SplitMode = "items" | "even";
 
 export interface Session {
   id: string;
@@ -11,6 +12,7 @@ export interface Session {
   receiptImageUrl: string | null;
   gcashNumber: string | null;
   currency: string;
+  splitMode: SplitMode;
   subtotalCents: number;
   taxCents: number;
   serviceChargeCents: number;

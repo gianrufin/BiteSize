@@ -165,3 +165,32 @@ export function computeSplit(
 
   return { allocations, unclaimedItemIds, unclaimedCents };
 }
+
+export interface EvenSplitAllocation {
+  participantId: string;
+  totalCents: number;
+}
+
+// For bills split evenly by headcount instead of by item claims. Divides the
+// grand total as evenly as integer cents allow; any leftover cent(s) from that
+// division go to the payer, same rounding philosophy as reconcileRounding.
+export function computeEvenSplit(
+  grandTotalCents: number,
+  participants: SplitParticipant[],
+): EvenSplitAllocation[] {
+  if (participants.length === 0) return [];
+
+  const payer = participants.find((p) => p.isPayer);
+  if (!payer) {
+    throw new Error("computeEvenSplit requires exactly one participant with isPayer: true");
+  }
+
+  const baseShareCents = Math.floor(grandTotalCents / participants.length);
+  const remainderCents = grandTotalCents - baseShareCents * participants.length;
+
+  return participants.map((participant) => ({
+    participantId: participant.id,
+    totalCents:
+      participant.id === payer.id ? baseShareCents + remainderCents : baseShareCents,
+  }));
+}

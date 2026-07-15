@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatCents } from "@/lib/format";
-import { computeSplit } from "@/lib/calculations/splitEngine";
+import { computeEvenSplit, computeSplit } from "@/lib/calculations/splitEngine";
 import { buildSummaryText } from "@/lib/session/summaryText";
 import { ChargesEditor } from "@/components/ChargesEditor";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
@@ -32,6 +32,7 @@ export function SummaryView({
     | "name"
     | "status"
     | "currency"
+    | "splitMode"
     | "subtotalCents"
     | "taxCents"
     | "serviceChargeCents"
@@ -65,6 +66,8 @@ export function SummaryView({
     }
   }
 
+  const isEvenSplit = session.splitMode === "even";
+
   const split = computeSplit(
     items.map((item) => ({ id: item.id, totalPriceCents: item.totalPriceCents })),
     claims,
@@ -78,8 +81,16 @@ export function SummaryView({
     },
   );
 
+  const evenAllocations = computeEvenSplit(
+    session.grandTotalCents,
+    participants.map((p) => ({ id: p.id, isPayer: p.isPayer })),
+  );
+
   const allocationByParticipantId = new Map(
-    split.allocations.map((a) => [a.participantId, a]),
+    (isEvenSplit ? evenAllocations : split.allocations).map((a) => [
+      a.participantId,
+      a,
+    ]),
   );
 
   const summaryText = buildSummaryText(
@@ -121,7 +132,7 @@ export function SummaryView({
         </div>
       </div>
 
-      {split.unclaimedItemIds.length > 0 ? (
+      {!isEvenSplit && split.unclaimedItemIds.length > 0 ? (
         <div className="rounded-2xl border border-amber/40 bg-surface p-4">
           <p className="text-sm font-medium text-amber">
             {formatCents(split.unclaimedCents, session.currency)} in items unclaimed

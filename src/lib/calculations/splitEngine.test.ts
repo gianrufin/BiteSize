@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeAllocations,
+  computeEvenSplit,
   computeParticipantSubtotalCents,
   computeSplit,
   reconcileRounding,
@@ -238,5 +239,55 @@ describe("computeSplit", () => {
     for (const allocation of result.allocations) {
       expect(allocation.totalCents).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("computeEvenSplit", () => {
+  it("divides the total evenly when it splits with no remainder", () => {
+    const participants: SplitParticipant[] = [
+      { id: "you", isPayer: true },
+      { id: "james", isPayer: false },
+      { id: "sophia", isPayer: false },
+      { id: "daniel", isPayer: false },
+    ];
+
+    const allocations = computeEvenSplit(4000, participants);
+
+    expect(allocations).toEqual([
+      { participantId: "you", totalCents: 1000 },
+      { participantId: "james", totalCents: 1000 },
+      { participantId: "sophia", totalCents: 1000 },
+      { participantId: "daniel", totalCents: 1000 },
+    ]);
+  });
+
+  it("gives the payer the leftover cents from an uneven division", () => {
+    const participants: SplitParticipant[] = [
+      { id: "you", isPayer: true },
+      { id: "james", isPayer: false },
+      { id: "sophia", isPayer: false },
+    ];
+
+    // 1000 / 3 = 333.33... — each non-payer gets 333, payer absorbs the 1 leftover cent.
+    const allocations = computeEvenSplit(1000, participants);
+    const total = allocations.reduce((sum, a) => sum + a.totalCents, 0);
+
+    expect(total).toBe(1000);
+    expect(allocations.find((a) => a.participantId === "james")?.totalCents).toBe(333);
+    expect(allocations.find((a) => a.participantId === "sophia")?.totalCents).toBe(333);
+    expect(allocations.find((a) => a.participantId === "you")?.totalCents).toBe(334);
+  });
+
+  it("throws when there is no payer", () => {
+    const participants: SplitParticipant[] = [
+      { id: "james", isPayer: false },
+      { id: "sophia", isPayer: false },
+    ];
+
+    expect(() => computeEvenSplit(1000, participants)).toThrow();
+  });
+
+  it("returns an empty array for no participants", () => {
+    expect(computeEvenSplit(1000, [])).toEqual([]);
   });
 });
