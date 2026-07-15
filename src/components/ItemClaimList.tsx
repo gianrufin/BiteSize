@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatCents } from "@/lib/format";
 import { computeEvenSplit, computeSplit, roundShareCents } from "@/lib/calculations/splitEngine";
+import { offlineFetch } from "@/lib/offline/offlineFetch";
 import type { ChargeAllocationMode, Item, SplitMode } from "@/types";
 
 export interface ClaimWithName {
@@ -108,13 +109,14 @@ export function ItemClaimList({
     }
     setPendingItemId(itemId);
     try {
-      const res = await fetch(`/api/sessions/${sessionCode}/claims`, {
+      const result = await offlineFetch(`/api/sessions/${sessionCode}/claims`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemId, markShared }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "Could not claim item");
+      if (result.status === "queued") return;
+      const data = await result.response.json().catch(() => ({}));
+      if (!result.response.ok) throw new Error(data.error ?? "Could not claim item");
     } catch (err) {
       setClaims((prev) => prev.filter((c) => c !== optimisticClaim));
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -135,10 +137,11 @@ export function ItemClaimList({
     );
     setPendingItemId(itemId);
     try {
-      const res = await fetch(`/api/sessions/${sessionCode}/claims/${itemId}`, {
+      const result = await offlineFetch(`/api/sessions/${sessionCode}/claims/${itemId}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Could not unclaim item");
+      if (result.status === "queued") return;
+      if (!result.response.ok) throw new Error("Could not unclaim item");
     } catch {
       if (removedClaim) setClaims((prev) => [...prev, removedClaim]);
       setError("Something went wrong");

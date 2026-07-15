@@ -3,12 +3,22 @@
 import { useState } from "react";
 import { formatCents } from "@/lib/format";
 import { findDuplicateItems } from "@/lib/items/findDuplicateItems";
+import { offlineFetch } from "@/lib/offline/offlineFetch";
+import {
+  cancelQueuedMutation,
+  findQueuedMutationByMeta,
+  updateQueuedMutation,
+} from "@/lib/offline/mutationQueue";
 import { ItemForm, type ItemFormValues } from "@/components/ItemForm";
 import { ItemRow, LOW_CONFIDENCE_THRESHOLD } from "@/components/ItemRow";
 import type { Item } from "@/types";
 
 function pairKey(idA: string, idB: string): string {
   return [idA, idB].sort().join(":");
+}
+
+function isLocalId(id: string): boolean {
+  return id.startsWith("local-");
 }
 
 export interface EditableSessionSummary {
@@ -47,46 +57,140 @@ export function ItemEditor({
       item.ocrConfidence < LOW_CONFIDENCE_THRESHOLD,
   ).length;
 
+  // Adjusts the two running totals the same way recomputeSessionTotals does
+  // server-side (subtotal + charges, charges untouched by item edits) — used
+  // whenever a mutation is queued offline and there's no server response to
+  // read the real totals back from.
+  function adjustTotalsBy(deltaCents: number) {
+    setSession((prev) => ({
+      ...prev,
+      subtotalCents: prev.subtotalCents + deltaCents,
+      grandTotalCents: prev.grandTotalCents + deltaCents,
+    }));
+  }
+
   async function addItem(values: ItemFormValues) {
-    const res = await fetch(`/api/sessions/${session.code}/items`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: values.name,
-        quantity: values.quantity,
-        unitPriceCents: Math.round(Number(values.priceAmount) * 100),
-      }),
-    });
-    if (!res.ok) throw new Error("Could not add item");
-    const { item, session: updatedSession } = await res.json();
+    const unitPriceCents = Math.round(Number(values.priceAmount) * 100);
+    const totalPriceCents = Math.round(values.quantity * unitPriceCents);
+    const tempId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const result = await offlineFetch(
+      `/api/sessions/${session.code}/items`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: values.name, quantity: values.quantity, unitPriceCents }),
+      },
+      { tempId },
+    );
+
+    if (result.status === "queued") {
+      setItems((prev) => [
+        ...prev,
+        {
+          id: tempId,
+          sessionId: "",
+          name: values.name,
+          quantity: values.quantity,
+          unitPriceCents,
+          totalPriceCents,
+          isShared: false,
+          ocrConfidence: null,
+          source: "manual",
+          position: prev.length,
+        },
+      ]);
+      adjustTotalsBy(totalPriceCents);
+      setIsAdding(false);
+      return;
+    }
+
+    if (!result.response.ok) throw new Error("Could not add item");
+    const { item, session: updatedSession } = await result.response.json();
     setItems((prev) => [...prev, item]);
     setSession(updatedSession);
     setIsAdding(false);
   }
 
   async function updateItem(itemId: string, values: ItemFormValues) {
-    const res = await fetch(`/api/sessions/${session.code}/items/${itemId}`, {
+    const unitPriceCents = Math.round(Number(values.priceAmount) * 100);
+    const totalPriceCents = Math.round(values.quantity * unitPriceCents);
+    const existing = items.find((item) => item.id === itemId);
+    const deltaCents = totalPriceCents - (existing?.totalPriceCents ?? 0);
+
+    const applyLocally = () => {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId
+            ? { ...item, name: values.name, quantity: values.quantity, unitPriceCents, totalPriceCents, ocrConfidence: null }
+            : item,
+        ),
+      );
+      adjustTotalsBy(deltaCents);
+      setEditingItemId(null);
+    };
+
+    // A still-unsynced item created offline has no real id yet — amend the
+    // queued create in place instead of PATCHing an id the server has never
+    // seen.
+    if (isLocalId(itemId)) {
+      const queued = findQueuedMutationByMeta("tempId", itemId);
+      if (queued) {
+        updateQueuedMutation(
+          queued.id,
+          JSON.stringify({ name: values.name, quantity: values.quantity, unitPriceCents }),
+        );
+      }
+      applyLocally();
+      return;
+    }
+
+    const result = await offlineFetch(`/api/sessions/${session.code}/items/${itemId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: values.name,
-        quantity: values.quantity,
-        unitPriceCents: Math.round(Number(values.priceAmount) * 100),
-      }),
+      body: JSON.stringify({ name: values.name, quantity: values.quantity, unitPriceCents }),
     });
-    if (!res.ok) throw new Error("Could not update item");
-    const { item, session: updatedSession } = await res.json();
+
+    if (result.status === "queued") {
+      applyLocally();
+      return;
+    }
+
+    if (!result.response.ok) throw new Error("Could not update item");
+    const { item, session: updatedSession } = await result.response.json();
     setItems((prev) => prev.map((existing) => (existing.id === item.id ? item : existing)));
     setSession(updatedSession);
     setEditingItemId(null);
   }
 
   async function deleteItem(itemId: string) {
-    const res = await fetch(`/api/sessions/${session.code}/items/${itemId}`, {
+    const existing = items.find((item) => item.id === itemId);
+    const deltaCents = -(existing?.totalPriceCents ?? 0);
+
+    const applyLocally = () => {
+      setItems((prev) => prev.filter((item) => item.id !== itemId));
+      adjustTotalsBy(deltaCents);
+      setEditingItemId(null);
+    };
+
+    if (isLocalId(itemId)) {
+      const queued = findQueuedMutationByMeta("tempId", itemId);
+      if (queued) cancelQueuedMutation(queued.id);
+      applyLocally();
+      return;
+    }
+
+    const result = await offlineFetch(`/api/sessions/${session.code}/items/${itemId}`, {
       method: "DELETE",
     });
-    if (!res.ok) throw new Error("Could not delete item");
-    const { session: updatedSession } = await res.json();
+
+    if (result.status === "queued") {
+      applyLocally();
+      return;
+    }
+
+    if (!result.response.ok) throw new Error("Could not delete item");
+    const { session: updatedSession } = await result.response.json();
     setItems((prev) => prev.filter((existing) => existing.id !== itemId));
     setSession(updatedSession);
     setEditingItemId(null);

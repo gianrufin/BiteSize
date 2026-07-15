@@ -18,6 +18,7 @@ export function ItemRow({
     item.source === "ocr" &&
     item.ocrConfidence !== null &&
     item.ocrConfidence < LOW_CONFIDENCE_THRESHOLD;
+  const isPendingSync = item.id.startsWith("local-");
 
   return (
     <button
@@ -36,6 +37,14 @@ export function ItemRow({
               className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber"
               title="Low-confidence scan — please double check"
             />
+          ) : null}
+          {isPendingSync ? (
+            <span
+              className="shrink-0 rounded-full bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent"
+              title="Saved offline — will sync when you're back online"
+            >
+              Pending sync
+            </span>
           ) : null}
         </div>
         <p className="text-sm text-muted">
