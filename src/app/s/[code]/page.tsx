@@ -50,7 +50,8 @@ export default async function SessionPage({
   const { data: participantRows } = await supabase
     .from("participants")
     .select("*")
-    .eq("session_id", session.id);
+    .eq("session_id", session.id)
+    .order("position", { ascending: true });
   const participants = (participantRows ?? []).map(mapParticipantRow);
 
   const itemIds = items.map((item) => item.id);

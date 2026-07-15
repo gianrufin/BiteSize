@@ -8,6 +8,7 @@ import { ChargesEditor } from "@/components/ChargesEditor";
 import { Confetti } from "@/components/Confetti";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { ExportSummaryImage } from "@/components/ExportSummaryImage";
+import { ManageParticipantsPanel } from "@/components/ManageParticipantsPanel";
 import { RoundingPreferenceSelector } from "@/components/RoundingPreferenceSelector";
 import type { Item, PaymentStatus, Session } from "@/types";
 
@@ -305,111 +306,21 @@ export function SummaryView({
         />
       ) : null}
 
-      <div>
-        <h2 className="mb-3 text-sm font-medium text-muted">
-          Participants ({participants.length})
-        </h2>
-        <div className="flex flex-col gap-2">
-          {participants.map((participant) => {
-            const isPayer = participant.isPayer;
-            const amountCents = isPayer
-              ? session.grandTotalCents
-              : getShareCents(participant.id);
-
-            const paymentStatus = getPaymentStatus(participant);
-
-            return (
-              <div key={participant.id} className="card px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full icon-well text-sm font-medium text-accent">
-                      {participant.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-medium text-text">
-                        {isPayer ? "You" : participant.name}
-                        {isPayer ? (
-                          <span className="ml-2 rounded-full icon-well px-2 py-0.5 text-xs font-medium text-accent">
-                            Payer
-                          </span>
-                        ) : null}
-                      </p>
-                      {!isPayer ? <p className="text-xs text-muted">Owes you</p> : null}
-                    </div>
-                  </div>
-                  <span className="font-medium text-text">
-                    {formatCents(amountCents, session.currency)}
-                  </span>
-                </div>
-
-                {!isPayer ? (
-                  <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        paymentStatus === "confirmed"
-                          ? "icon-well text-accent"
-                          : paymentStatus === "submitted"
-                            ? "bg-amber/15 text-amber"
-                            : "text-muted"
-                      }`}
-                    >
-                      {paymentStatus === "confirmed"
-                        ? "✓ Paid"
-                        : paymentStatus === "submitted"
-                          ? "Payment sent"
-                          : "Unpaid"}
-                    </span>
-                    <div className="flex items-center gap-3">
-                      {participant.paymentProofUrl ? (
-                        <a
-                          href={participant.paymentProofUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm font-medium text-accent"
-                        >
-                          View proof
-                        </a>
-                      ) : null}
-                      {paymentStatus === "submitted" ? (
-                        <button
-                          type="button"
-                          onClick={() => setPaymentStatus(participant.id, "confirmed")}
-                          className="text-sm font-medium text-accent"
-                        >
-                          Confirm
-                        </button>
-                      ) : null}
-                      {paymentStatus !== "unpaid" ? (
-                        <button
-                          type="button"
-                          onClick={() => setPaymentStatus(participant.id, "unpaid")}
-                          className="text-sm text-muted"
-                        >
-                          Reset
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : null}
-
-                {!isPayer && !isEvenSplit && hasCharges ? (
-                  <label className="mt-2 flex items-center gap-2 border-t border-border pt-2 text-sm text-muted">
-                    <input
-                      type="checkbox"
-                      checked={!getExcludedFromCharges(participant)}
-                      onChange={(e) =>
-                        toggleExcludedFromCharges(participant.id, !e.target.checked)
-                      }
-                      className="h-4 w-4 accent-accent"
-                    />
-                    Include in tax / service charge / tip
-                  </label>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <ManageParticipantsPanel
+        sessionCode={sessionCode}
+        initialParticipants={participants}
+        claims={claims}
+        currency={session.currency}
+        grandTotalCents={session.grandTotalCents}
+        isLocked={isLocked}
+        isEvenSplit={isEvenSplit}
+        hasCharges={hasCharges}
+        getPaymentStatus={getPaymentStatus}
+        setPaymentStatus={setPaymentStatus}
+        getExcludedFromCharges={getExcludedFromCharges}
+        toggleExcludedFromCharges={toggleExcludedFromCharges}
+        getShareCents={getShareCents}
+      />
 
       <div>
         <h2 className="mb-3 text-sm font-medium text-muted">Breakdown</h2>

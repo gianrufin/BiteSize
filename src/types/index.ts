@@ -54,6 +54,7 @@ export interface Participant {
   paymentStatus: PaymentStatus;
   paymentProofUrl: string | null;
   excludedFromCharges: boolean;
+  position: number;
   joinedAt: string;
 }
 

@@ -60,6 +60,7 @@ export function mapParticipantRow(row: ParticipantRow): Participant {
     paymentStatus: row.payment_status,
     paymentProofUrl: row.payment_proof_url,
     excludedFromCharges: row.excluded_from_charges,
+    position: row.position,
     joinedAt: row.joined_at,
   };
 }

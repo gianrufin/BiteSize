@@ -67,6 +67,7 @@ export interface Database {
           payment_status: "unpaid" | "submitted" | "confirmed";
           payment_proof_url: string | null;
           excluded_from_charges: boolean;
+          position: number;
           joined_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["participants"]["Row"]> & {

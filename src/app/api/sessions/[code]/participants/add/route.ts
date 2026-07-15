@@ -1,9 +1,15 @@
+import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { getOrCreateDeviceToken } from "@/lib/session/deviceToken";
+import { getDeviceToken } from "@/lib/session/deviceToken";
 import { mapParticipantRow } from "@/lib/mappers";
 import { resolveUniqueParticipantName } from "@/lib/session/participantNaming";
 
+// Payer-only: adds a participant directly, for someone who isn't going to
+// scan the join link themselves (paying cash, not using the app). They get a
+// placeholder device token that can never match a real one, so this row
+// behaves like any other participant everywhere except nobody can ever "log
+// in" as them — the payer manages their share on their behalf.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ code: string }> },
@@ -20,56 +26,41 @@ export async function POST(
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
-  const deviceToken = await getOrCreateDeviceToken();
-
-  if (deviceToken === session.payer_device_token) {
+  const deviceToken = await getDeviceToken();
+  if (deviceToken !== session.payer_device_token) {
     return NextResponse.json(
-      { error: "You created this bill — no need to join it separately." },
-      { status: 400 },
+      { error: "Only the payer can add participants" },
+      { status: 403 },
     );
   }
 
-  // Re-submitting the join form (refresh, double-tap) shouldn't error — just
-  // hand back the participant that already exists for this device.
-  const { data: existing } = await supabase
-    .from("participants")
-    .select("*")
-    .eq("session_id", session.id)
-    .eq("device_token", deviceToken)
-    .maybeSingle();
-
-  if (existing) {
-    return NextResponse.json({ participant: mapParticipantRow(existing) });
-  }
-
   const body = await request.json().catch(() => ({}));
-  const requestedName = typeof body?.name === "string" ? body.name.trim() : "";
-  if (!requestedName) {
-    return NextResponse.json({ error: "Please enter your name" }, { status: 400 });
-  }
-
-  const name = await resolveUniqueParticipantName(supabase, session.id, requestedName);
+  const rawName = typeof body?.name === "string" ? body.name.trim() : "";
 
   const { count: existingCount } = await supabase
     .from("participants")
     .select("id", { count: "exact", head: true })
     .eq("session_id", session.id);
 
+  const position = existingCount ?? 0;
+  const requestedName = rawName || `Guest ${position + 1}`;
+  const name = await resolveUniqueParticipantName(supabase, session.id, requestedName);
+
   const { data: participant, error } = await supabase
     .from("participants")
     .insert({
       session_id: session.id,
       name,
-      device_token: deviceToken,
+      device_token: `guest-${nanoid()}`,
       is_payer: false,
-      position: existingCount ?? 0,
+      position,
     })
     .select("*")
     .single();
 
   if (error || !participant) {
     return NextResponse.json(
-      { error: error?.message ?? "Could not join this bill" },
+      { error: error?.message ?? "Could not add participant" },
       { status: 500 },
     );
   }

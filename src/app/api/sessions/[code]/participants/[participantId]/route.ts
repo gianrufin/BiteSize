@@ -100,3 +100,53 @@ export async function PATCH(
 
   return NextResponse.json({ participant: mapParticipantRow(updated) });
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ code: string; participantId: string }> },
+) {
+  const { code, participantId } = await params;
+  const supabase = createServerSupabaseClient();
+  const { data: session } = await supabase
+    .from("sessions")
+    .select("*")
+    .eq("code", code)
+    .single();
+
+  if (!session) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
+
+  const deviceToken = await getDeviceToken();
+  if (deviceToken !== session.payer_device_token) {
+    return NextResponse.json(
+      { error: "Only the payer can remove participants" },
+      { status: 403 },
+    );
+  }
+
+  const { data: participant } = await supabase
+    .from("participants")
+    .select("is_payer")
+    .eq("id", participantId)
+    .eq("session_id", session.id)
+    .single();
+
+  if (!participant) {
+    return NextResponse.json({ error: "Participant not found" }, { status: 404 });
+  }
+
+  if (participant.is_payer) {
+    return NextResponse.json({ error: "Can't remove the payer" }, { status: 400 });
+  }
+
+  // item_claims cascades on participant delete — their claimed items become
+  // unclaimed (still on the bill, ready to reassign), not lost.
+  const { error } = await supabase.from("participants").delete().eq("id", participantId);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
