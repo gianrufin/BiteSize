@@ -1,8 +1,9 @@
-import type { Item, Session } from "@/types";
+import type { Item, Participant, Session } from "@/types";
 import type { Database } from "@/types/database";
 
 type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
 type ItemRow = Database["public"]["Tables"]["items"]["Row"];
+type ParticipantRow = Database["public"]["Tables"]["participants"]["Row"];
 
 export function mapSessionRow(row: SessionRow): Session {
   return {
@@ -37,5 +38,16 @@ export function mapItemRow(row: ItemRow): Item {
     ocrConfidence: row.ocr_confidence,
     source: row.source,
     position: row.position,
+  };
+}
+
+export function mapParticipantRow(row: ParticipantRow): Participant {
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    name: row.name,
+    deviceToken: row.device_token,
+    isPayer: row.is_payer,
+    joinedAt: row.joined_at,
   };
 }
