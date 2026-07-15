@@ -6,6 +6,7 @@ import { computeEvenSplit, computeSplit } from "@/lib/calculations/splitEngine";
 import { buildSummaryText } from "@/lib/session/summaryText";
 import { ChargesEditor } from "@/components/ChargesEditor";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
+import { ExportSummaryImage } from "@/components/ExportSummaryImage";
 import type { Item, Session } from "@/types";
 
 export interface SummaryParticipant {
@@ -93,16 +94,18 @@ export function SummaryView({
     ]),
   );
 
+  const summaryParticipants = participants.map((participant) => ({
+    name: participant.name,
+    isPayer: participant.isPayer,
+    amountCents: participant.isPayer
+      ? session.grandTotalCents
+      : (allocationByParticipantId.get(participant.id)?.totalCents ?? 0),
+  }));
+
   const summaryText = buildSummaryText(
     session.name ?? "Bill",
     session.grandTotalCents,
-    participants.map((participant) => ({
-      name: participant.name,
-      isPayer: participant.isPayer,
-      amountCents: participant.isPayer
-        ? session.grandTotalCents
-        : (allocationByParticipantId.get(participant.id)?.totalCents ?? 0),
-    })),
+    summaryParticipants,
     session.currency,
   );
 
@@ -116,11 +119,17 @@ export function SummaryView({
         <p className="text-4xl font-semibold text-text">
           {formatCents(session.grandTotalCents, session.currency)}
         </p>
-        <div className="mt-3 flex justify-center gap-2">
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
           <CopyLinkButton
             text={summaryText}
             label="Copy Summary"
             className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-accent"
+          />
+          <ExportSummaryImage
+            billName={session.name ?? "Bill"}
+            grandTotalCents={session.grandTotalCents}
+            currency={session.currency}
+            participants={summaryParticipants}
           />
           <button
             onClick={toggleLock}
