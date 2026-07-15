@@ -26,7 +26,7 @@ export async function QRCodeCard({ url }: { url: string }) {
       </div>
       <div className="mt-4 flex items-center justify-between gap-2 rounded-xl border border-border bg-bg px-3 py-2">
         <span className="truncate text-sm text-muted">{url}</span>
-        <CopyLinkButton url={url} />
+        <CopyLinkButton text={url} />
       </div>
     </div>
   );

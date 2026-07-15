@@ -9,6 +9,7 @@ export interface Session {
   name: string | null;
   venueName: string | null;
   receiptImageUrl: string | null;
+  gcashNumber: string | null;
   currency: string;
   subtotalCents: number;
   taxCents: number;

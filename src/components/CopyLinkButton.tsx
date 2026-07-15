@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 
-export function CopyLinkButton({ url }: { url: string }) {
+export function CopyLinkButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Clipboard API unavailable (e.g. insecure context) — the link is still
+      // Clipboard API unavailable (e.g. insecure context) — the value is still
       // visible as selectable text, so there's nothing further to fall back to.
     }
   }

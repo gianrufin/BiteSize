@@ -10,6 +10,7 @@ export interface Database {
           name: string | null;
           venue_name: string | null;
           receipt_image_url: string | null;
+          gcash_number: string | null;
           currency: string;
           subtotal_cents: number;
           tax_cents: number;

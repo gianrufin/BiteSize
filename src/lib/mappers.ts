@@ -15,6 +15,7 @@ export function mapSessionRow(row: SessionRow): Session {
     name: row.name,
     venueName: row.venue_name,
     receiptImageUrl: row.receipt_image_url,
+    gcashNumber: row.gcash_number,
     currency: row.currency,
     subtotalCents: row.subtotal_cents,
     taxCents: row.tax_cents,

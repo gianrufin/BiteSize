@@ -5,6 +5,8 @@ import { mapItemRow, mapItemClaimRow, mapParticipantRow } from "@/lib/mappers";
 import { Logo } from "@/components/Logo";
 import { ItemEditor } from "@/components/ItemEditor";
 import { ItemClaimList, type ClaimWithName } from "@/components/ItemClaimList";
+import { GCashNumberCard } from "@/components/GCashNumberCard";
+import { GCashPaymentInfo } from "@/components/GCashPaymentInfo";
 
 export default async function SessionPage({
   params,
@@ -82,6 +84,13 @@ export default async function SessionPage({
           />
         </div>
 
+        <div className="mt-4">
+          <GCashNumberCard
+            sessionCode={session.code}
+            initialGcashNumber={session.gcash_number}
+          />
+        </div>
+
         {items.length > 0 && currentParticipant ? (
           <div className="mt-8">
             <h2 className="mb-3 text-sm font-medium text-muted">
@@ -112,6 +121,12 @@ export default async function SessionPage({
       <p className="mt-1 text-sm text-muted">
         You&apos;ve joined as {currentParticipant.name}
       </p>
+
+      {session.gcash_number ? (
+        <div className="mt-4">
+          <GCashPaymentInfo gcashNumber={session.gcash_number} />
+        </div>
+      ) : null}
 
       <div className="mt-6">
         <ItemClaimList
