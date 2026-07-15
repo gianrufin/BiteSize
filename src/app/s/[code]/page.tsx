@@ -59,6 +59,7 @@ export default async function SessionPage({
     : undefined;
 
   const allParticipants = participants.map((p) => ({ id: p.id, isPayer: p.isPayer }));
+  const isLocked = session.status === "locked";
   const charges = {
     taxCents: session.tax_cents,
     serviceChargeCents: session.service_charge_cents,
@@ -102,6 +103,7 @@ export default async function SessionPage({
               grandTotalCents: session.grand_total_cents,
             }}
             items={items}
+            isLocked={isLocked}
           />
         </div>
 
@@ -124,6 +126,7 @@ export default async function SessionPage({
               currentParticipantId={currentParticipant.id}
               allParticipants={allParticipants}
               charges={charges}
+              isBillLocked={isLocked}
             />
           </div>
         ) : null}
@@ -159,6 +162,7 @@ export default async function SessionPage({
           currentParticipantId={currentParticipant.id}
           allParticipants={allParticipants}
           charges={charges}
+          isBillLocked={isLocked}
         />
       </div>
     </main>

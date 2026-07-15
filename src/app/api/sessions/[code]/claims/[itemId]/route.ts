@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentParticipant } from "@/lib/session/currentParticipant";
+import { lockedResponse } from "@/lib/session/locking";
 
 export async function DELETE(
   request: Request,
@@ -16,6 +17,10 @@ export async function DELETE(
 
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
+
+  if (session.status === "locked") {
+    return lockedResponse();
   }
 
   const participant = await getCurrentParticipant(supabase, session);

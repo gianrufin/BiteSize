@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getDeviceToken } from "@/lib/session/deviceToken";
 import { recomputeSessionTotals } from "@/lib/session/recomputeTotals";
 import { mapItemRow, mapSessionRow } from "@/lib/mappers";
+import { lockedResponse } from "@/lib/session/locking";
 
 export async function POST(
   request: Request,
@@ -26,6 +27,10 @@ export async function POST(
       { error: "Only the payer can edit items" },
       { status: 403 },
     );
+  }
+
+  if (session.status === "locked") {
+    return lockedResponse();
   }
 
   const body = await request.json().catch(() => ({}));

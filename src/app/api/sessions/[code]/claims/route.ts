@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentParticipant } from "@/lib/session/currentParticipant";
 import { mapItemClaimRow } from "@/lib/mappers";
+import { lockedResponse } from "@/lib/session/locking";
 
 export async function POST(
   request: Request,
@@ -17,6 +18,10 @@ export async function POST(
 
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
+
+  if (session.status === "locked") {
+    return lockedResponse();
   }
 
   const participant = await getCurrentParticipant(supabase, session);

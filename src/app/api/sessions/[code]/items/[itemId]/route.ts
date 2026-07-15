@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getDeviceToken } from "@/lib/session/deviceToken";
 import { recomputeSessionTotals } from "@/lib/session/recomputeTotals";
 import { mapItemRow, mapSessionRow } from "@/lib/mappers";
+import { lockedResponse } from "@/lib/session/locking";
 
 async function loadSessionAndVerifyPayer(code: string) {
   const supabase = createServerSupabaseClient();
@@ -26,6 +27,10 @@ async function loadSessionAndVerifyPayer(code: string) {
         { status: 403 },
       ),
     } as const;
+  }
+
+  if (session.status === "locked") {
+    return { error: lockedResponse() } as const;
   }
 
   return { session, supabase } as const;

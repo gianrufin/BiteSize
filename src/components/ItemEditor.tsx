@@ -17,9 +17,11 @@ export interface EditableSessionSummary {
 export function ItemEditor({
   session: initialSession,
   items: initialItems,
+  isLocked = false,
 }: {
   session: EditableSessionSummary;
   items: Item[];
+  isLocked?: boolean;
 }) {
   const [session, setSession] = useState(initialSession);
   const [items, setItems] = useState(initialItems);
@@ -84,6 +86,9 @@ export function ItemEditor({
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-2xl border border-border bg-surface p-4">
+        {isLocked ? (
+          <p className="mb-1 text-xs font-medium text-amber">🔒 This bill is locked</p>
+        ) : null}
         <p className="text-sm text-muted">
           Items {items.length} · Subtotal {formatCents(session.subtotalCents)}
         </p>
@@ -116,13 +121,18 @@ export function ItemEditor({
                 onDelete={() => deleteItem(item.id)}
               />
             ) : (
-              <ItemRow key={item.id} item={item} onEdit={() => setEditingItemId(item.id)} />
+              <ItemRow
+                key={item.id}
+                item={item}
+                onEdit={() => setEditingItemId(item.id)}
+                readOnly={isLocked}
+              />
             ),
           )}
         </div>
       )}
 
-      {isAdding ? (
+      {isLocked ? null : isAdding ? (
         <ItemForm
           submitLabel="Add item"
           initial={{ name: "", quantity: 1, priceAmount: "" }}

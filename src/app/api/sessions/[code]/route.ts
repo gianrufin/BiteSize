@@ -77,6 +77,20 @@ export async function PATCH(
     touchesCharges = true;
   }
 
+  const isUnlockingInThisRequest = "locked" in body && body.locked === false;
+  if (touchesCharges && session.status === "locked" && !isUnlockingInThisRequest) {
+    return NextResponse.json(
+      { error: "This bill is locked — unlock it first to change charges" },
+      { status: 403 },
+    );
+  }
+
+  if ("locked" in body) {
+    const shouldLock = Boolean(body.locked);
+    update.status = shouldLock ? "locked" : "open";
+    update.locked_at = shouldLock ? new Date().toISOString() : null;
+  }
+
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }

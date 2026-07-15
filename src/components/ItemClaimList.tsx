@@ -26,6 +26,7 @@ export function ItemClaimList({
   currentParticipantId,
   allParticipants,
   charges,
+  isBillLocked = false,
 }: {
   sessionCode: string;
   items: Item[];
@@ -33,6 +34,7 @@ export function ItemClaimList({
   currentParticipantId: string;
   allParticipants: { id: string; isPayer: boolean }[];
   charges: ClaimListCharges;
+  isBillLocked?: boolean;
 }) {
   const [claims, setClaims] = useState(initialClaims);
   const [sharedItemIds, setSharedItemIds] = useState(
@@ -117,7 +119,7 @@ export function ItemClaimList({
             >
               <button
                 type="button"
-                disabled={isPending || isLockedByOther}
+                disabled={isPending || isLockedByOther || isBillLocked}
                 onClick={() => (claimedByMe ? unclaimItem(item.id) : claimItem(item.id))}
                 aria-label={claimedByMe ? "Unclaim item" : "Claim item"}
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border ${
@@ -141,7 +143,7 @@ export function ItemClaimList({
                 </p>
               </div>
 
-              {isLockedByOther ? (
+              {isLockedByOther && !isBillLocked ? (
                 <button
                   type="button"
                   disabled={isPending}
@@ -155,6 +157,12 @@ export function ItemClaimList({
           );
         })}
       </div>
+
+      {isBillLocked ? (
+        <p className="text-center text-sm text-muted">
+          🔒 This bill is locked — claims can no longer be changed.
+        </p>
+      ) : null}
 
       {error ? <p className="text-sm text-amber">{error}</p> : null}
 

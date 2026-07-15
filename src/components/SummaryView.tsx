@@ -30,6 +30,7 @@ export function SummaryView({
   initialSession: Pick<
     Session,
     | "name"
+    | "status"
     | "subtotalCents"
     | "taxCents"
     | "serviceChargeCents"
@@ -42,6 +43,26 @@ export function SummaryView({
   claims: SummaryClaim[];
 }) {
   const [session, setSession] = useState(initialSession);
+  const [isTogglingLock, setIsTogglingLock] = useState(false);
+  const isLocked = session.status === "locked";
+
+  async function toggleLock() {
+    setIsTogglingLock(true);
+    try {
+      const res = await fetch(`/api/sessions/${sessionCode}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locked: !isLocked }),
+      });
+      if (!res.ok) throw new Error("Could not update lock state");
+      const data = await res.json();
+      setSession(data.session);
+    } catch {
+      // Best-effort — the button just stays clickable to retry.
+    } finally {
+      setIsTogglingLock(false);
+    }
+  }
 
   const split = computeSplit(
     items.map((item) => ({ id: item.id, totalPriceCents: item.totalPriceCents })),
@@ -75,16 +96,26 @@ export function SummaryView({
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-2xl border border-border bg-surface p-5 text-center">
+        {isLocked ? (
+          <p className="mb-1 text-xs font-medium text-amber">🔒 Locked</p>
+        ) : null}
         <p className="text-sm text-muted">Total bill</p>
         <p className="text-4xl font-semibold text-text">
           {formatCents(session.grandTotalCents)}
         </p>
-        <div className="mt-3 flex justify-center">
+        <div className="mt-3 flex justify-center gap-2">
           <CopyLinkButton
             text={summaryText}
             label="Copy Summary"
             className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-accent"
           />
+          <button
+            onClick={toggleLock}
+            disabled={isTogglingLock}
+            className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text disabled:opacity-60"
+          >
+            {isLocked ? "Unlock bill" : "Lock bill"}
+          </button>
         </div>
       </div>
 
@@ -101,16 +132,22 @@ export function SummaryView({
         </div>
       ) : null}
 
-      <ChargesEditor
-        sessionCode={sessionCode}
-        initialCharges={{
-          taxCents: session.taxCents,
-          serviceChargeCents: session.serviceChargeCents,
-          tipCents: session.tipCents,
-          discountCents: session.discountCents,
-        }}
-        onSessionUpdate={setSession}
-      />
+      {isLocked ? (
+        <div className="rounded-2xl border border-border bg-surface p-4 text-center text-sm text-muted">
+          Charges are locked. Unlock the bill to make changes.
+        </div>
+      ) : (
+        <ChargesEditor
+          sessionCode={sessionCode}
+          initialCharges={{
+            taxCents: session.taxCents,
+            serviceChargeCents: session.serviceChargeCents,
+            tipCents: session.tipCents,
+            discountCents: session.discountCents,
+          }}
+          onSessionUpdate={setSession}
+        />
+      )}
 
       <div>
         <h2 className="mb-3 text-sm font-medium text-muted">

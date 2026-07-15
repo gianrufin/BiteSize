@@ -6,9 +6,11 @@ const LOW_CONFIDENCE_THRESHOLD = 0.6;
 export function ItemRow({
   item,
   onEdit,
+  readOnly = false,
 }: {
   item: Item;
   onEdit: () => void;
+  readOnly?: boolean;
 }) {
   const isLowConfidence =
     item.source === "ocr" &&
@@ -18,7 +20,8 @@ export function ItemRow({
   return (
     <button
       onClick={onEdit}
-      className="flex w-full items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 text-left transition hover:bg-surface-muted"
+      disabled={readOnly}
+      className="flex w-full items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 text-left transition hover:bg-surface-muted disabled:hover:bg-surface"
     >
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-medium text-accent">
         {item.quantity}
