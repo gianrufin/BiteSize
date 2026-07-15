@@ -1,6 +1,8 @@
 import { formatCents } from "@/lib/format";
 import type { Item } from "@/types";
 
+const LOW_CONFIDENCE_THRESHOLD = 0.6;
+
 export function ItemRow({
   item,
   onEdit,
@@ -8,6 +10,11 @@ export function ItemRow({
   item: Item;
   onEdit: () => void;
 }) {
+  const isLowConfidence =
+    item.source === "ocr" &&
+    item.ocrConfidence !== null &&
+    item.ocrConfidence < LOW_CONFIDENCE_THRESHOLD;
+
   return (
     <button
       onClick={onEdit}
@@ -17,7 +24,15 @@ export function ItemRow({
         {item.quantity}
       </div>
       <div className="flex-1">
-        <p className="font-medium text-text">{item.name}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="font-medium text-text">{item.name}</p>
+          {isLowConfidence ? (
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber"
+              title="Low-confidence scan — please double check"
+            />
+          ) : null}
+        </div>
         <p className="text-sm text-muted">{formatCents(item.unitPriceCents)} each</p>
       </div>
       <span className="font-medium text-text">

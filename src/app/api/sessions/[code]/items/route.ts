@@ -32,6 +32,11 @@ export async function POST(
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const quantity = Number(body?.quantity) || 1;
   const unitPriceCents = Math.round(Number(body?.unitPriceCents));
+  const source = body?.source === "ocr" ? "ocr" : "manual";
+  const ocrConfidence =
+    source === "ocr" && Number.isFinite(Number(body?.ocrConfidence))
+      ? Math.max(0, Math.min(1, Number(body.ocrConfidence)))
+      : null;
 
   if (!name) {
     return NextResponse.json({ error: "Item name is required" }, { status: 400 });
@@ -64,7 +69,8 @@ export async function POST(
       quantity,
       unit_price_cents: unitPriceCents,
       total_price_cents: totalPriceCents,
-      source: "manual",
+      source,
+      ocr_confidence: ocrConfidence,
       position: existingItemCount ?? 0,
     })
     .select("*")
