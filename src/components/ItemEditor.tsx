@@ -10,6 +10,7 @@ import type { Item } from "@/types";
 export interface EditableSessionSummary {
   code: string;
   name: string | null;
+  currency: string;
   subtotalCents: number;
   grandTotalCents: number;
 }
@@ -34,9 +35,10 @@ export function ItemEditor({
       name: session.name ?? "New bill",
       date: new Date().toISOString(),
       totalCents: session.grandTotalCents,
+      currency: session.currency,
       role: "payer",
     });
-  }, [session.code, session.name, session.grandTotalCents]);
+  }, [session.code, session.name, session.grandTotalCents, session.currency]);
 
   async function addItem(values: ItemFormValues) {
     const res = await fetch(`/api/sessions/${session.code}/items`, {
@@ -90,10 +92,11 @@ export function ItemEditor({
           <p className="mb-1 text-xs font-medium text-amber">🔒 This bill is locked</p>
         ) : null}
         <p className="text-sm text-muted">
-          Items {items.length} · Subtotal {formatCents(session.subtotalCents)}
+          Items {items.length} · Subtotal{" "}
+          {formatCents(session.subtotalCents, session.currency)}
         </p>
         <p className="text-2xl font-semibold text-text">
-          {formatCents(session.grandTotalCents)}
+          {formatCents(session.grandTotalCents, session.currency)}
         </p>
       </div>
 
@@ -116,6 +119,7 @@ export function ItemEditor({
                   quantity: item.quantity,
                   priceAmount: (item.unitPriceCents / 100).toFixed(2),
                 }}
+                currency={session.currency}
                 onSubmit={(values) => updateItem(item.id, values)}
                 onCancel={() => setEditingItemId(null)}
                 onDelete={() => deleteItem(item.id)}
@@ -124,6 +128,7 @@ export function ItemEditor({
               <ItemRow
                 key={item.id}
                 item={item}
+                currency={session.currency}
                 onEdit={() => setEditingItemId(item.id)}
                 readOnly={isLocked}
               />
@@ -136,6 +141,7 @@ export function ItemEditor({
         <ItemForm
           submitLabel="Add item"
           initial={{ name: "", quantity: 1, priceAmount: "" }}
+          currency={session.currency}
           onSubmit={addItem}
           onCancel={() => setIsAdding(false)}
         />

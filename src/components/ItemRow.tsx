@@ -5,10 +5,12 @@ const LOW_CONFIDENCE_THRESHOLD = 0.6;
 
 export function ItemRow({
   item,
+  currency,
   onEdit,
   readOnly = false,
 }: {
   item: Item;
+  currency: string;
   onEdit: () => void;
   readOnly?: boolean;
 }) {
@@ -36,10 +38,12 @@ export function ItemRow({
             />
           ) : null}
         </div>
-        <p className="text-sm text-muted">{formatCents(item.unitPriceCents)} each</p>
+        <p className="text-sm text-muted">
+          {formatCents(item.unitPriceCents, currency)} each
+        </p>
       </div>
       <span className="font-medium text-text">
-        {formatCents(item.totalPriceCents)}
+        {formatCents(item.totalPriceCents, currency)}
       </span>
     </button>
   );

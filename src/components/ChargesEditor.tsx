@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getCurrencySymbol } from "@/lib/format";
 import type { Session } from "@/types";
 
 export interface ChargesValue {
@@ -22,10 +23,12 @@ function inputToCents(value: string): number {
 export function ChargesEditor({
   sessionCode,
   initialCharges,
+  currency,
   onSessionUpdate,
 }: {
   sessionCode: string;
   initialCharges: ChargesValue;
+  currency: string;
   onSessionUpdate: (session: Session) => void;
 }) {
   const [tax, setTax] = useState(centsToInput(initialCharges.taxCents));
@@ -82,10 +85,20 @@ export function ChargesEditor({
       className="flex flex-col gap-3 card p-4"
     >
       <div className="grid grid-cols-2 gap-3">
-        <ChargeField label="Tax" value={tax} onChange={setTax} />
-        <ChargeField label="Service charge" value={serviceCharge} onChange={setServiceCharge} />
-        <ChargeField label="Tip" value={tip} onChange={setTip} />
-        <ChargeField label="Discount" value={discount} onChange={setDiscount} />
+        <ChargeField label="Tax" value={tax} onChange={setTax} currency={currency} />
+        <ChargeField
+          label="Service charge"
+          value={serviceCharge}
+          onChange={setServiceCharge}
+          currency={currency}
+        />
+        <ChargeField label="Tip" value={tip} onChange={setTip} currency={currency} />
+        <ChargeField
+          label="Discount"
+          value={discount}
+          onChange={setDiscount}
+          currency={currency}
+        />
       </div>
 
       {error ? <p className="text-sm text-amber">{error}</p> : null}
@@ -105,16 +118,18 @@ function ChargeField({
   label,
   value,
   onChange,
+  currency,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  currency: string;
 }) {
   return (
     <div>
       <label className="mb-1 block text-sm text-muted">{label}</label>
       <div className="flex items-center rounded-xl border border-border bg-bg pl-3 focus-within:border-accent">
-        <span className="text-muted">₱</span>
+        <span className="text-muted">{getCurrencySymbol(currency)}</span>
         <input
           type="number"
           min="0"

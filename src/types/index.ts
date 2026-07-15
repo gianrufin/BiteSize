@@ -55,5 +55,6 @@ export interface RecentBill {
   name: string;
   date: string;
   totalCents: number;
+  currency: string;
   role: "payer" | "participant";
 }

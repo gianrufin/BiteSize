@@ -12,12 +12,13 @@ export function buildSummaryText(
   billName: string,
   grandTotalCents: number,
   participants: SummaryTextParticipant[],
+  currency = "PHP",
 ): string {
-  const lines = [`${billName} — ${formatCents(grandTotalCents)}`, ""];
+  const lines = [`${billName} — ${formatCents(grandTotalCents, currency)}`, ""];
 
   for (const participant of participants) {
     if (participant.isPayer) continue;
-    lines.push(`${participant.name}: ${formatCents(participant.amountCents)}`);
+    lines.push(`${participant.name}: ${formatCents(participant.amountCents, currency)}`);
   }
 
   return lines.join("\n");

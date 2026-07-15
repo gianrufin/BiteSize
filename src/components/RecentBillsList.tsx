@@ -49,7 +49,7 @@ export function RecentBillsList() {
                 </div>
               </div>
               <span className="font-medium text-text">
-                {formatCents(bill.totalCents)}
+                {formatCents(bill.totalCents, bill.currency)}
               </span>
             </Link>
           </li>

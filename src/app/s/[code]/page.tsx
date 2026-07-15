@@ -98,6 +98,7 @@ export default async function SessionPage({
             session={{
               code: session.code,
               name: session.name,
+              currency: session.currency,
               subtotalCents: session.subtotal_cents,
               grandTotalCents: session.grand_total_cents,
             }}
@@ -126,6 +127,7 @@ export default async function SessionPage({
               currentParticipantId={currentParticipant.id}
               allParticipants={allParticipants}
               charges={charges}
+              currency={session.currency}
               isBillLocked={isLocked}
             />
           </div>
@@ -164,6 +166,7 @@ export default async function SessionPage({
           currentParticipantId={currentParticipant.id}
           allParticipants={allParticipants}
           charges={charges}
+          currency={session.currency}
           isBillLocked={isLocked}
         />
       </div>

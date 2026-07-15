@@ -31,6 +31,7 @@ export function SummaryView({
     Session,
     | "name"
     | "status"
+    | "currency"
     | "subtotalCents"
     | "taxCents"
     | "serviceChargeCents"
@@ -91,6 +92,7 @@ export function SummaryView({
         ? session.grandTotalCents
         : (allocationByParticipantId.get(participant.id)?.totalCents ?? 0),
     })),
+    session.currency,
   );
 
   return (
@@ -101,7 +103,7 @@ export function SummaryView({
         ) : null}
         <p className="text-sm text-muted">Total bill</p>
         <p className="text-4xl font-semibold text-text">
-          {formatCents(session.grandTotalCents)}
+          {formatCents(session.grandTotalCents, session.currency)}
         </p>
         <div className="mt-3 flex justify-center gap-2">
           <CopyLinkButton
@@ -122,7 +124,7 @@ export function SummaryView({
       {split.unclaimedItemIds.length > 0 ? (
         <div className="rounded-2xl border border-amber/40 bg-surface p-4">
           <p className="text-sm font-medium text-amber">
-            {formatCents(split.unclaimedCents)} in items unclaimed
+            {formatCents(split.unclaimedCents, session.currency)} in items unclaimed
           </p>
           <p className="mt-1 text-sm text-muted">
             {split.unclaimedItemIds.length} item
@@ -145,6 +147,7 @@ export function SummaryView({
             tipCents: session.tipCents,
             discountCents: session.discountCents,
           }}
+          currency={session.currency}
           onSessionUpdate={setSession}
         />
       )}
@@ -181,7 +184,9 @@ export function SummaryView({
                     {!isPayer ? <p className="text-xs text-muted">Owes you</p> : null}
                   </div>
                 </div>
-                <span className="font-medium text-text">{formatCents(amountCents)}</span>
+                <span className="font-medium text-text">
+                  {formatCents(amountCents, session.currency)}
+                </span>
               </div>
             );
           })}
@@ -191,19 +196,35 @@ export function SummaryView({
       <div>
         <h2 className="mb-3 text-sm font-medium text-muted">Breakdown</h2>
         <div className="flex flex-col gap-2 card p-4">
-          <BreakdownRow label="Items" cents={session.subtotalCents} />
-          {session.taxCents > 0 ? <BreakdownRow label="Tax" cents={session.taxCents} /> : null}
-          {session.serviceChargeCents > 0 ? (
-            <BreakdownRow label="Service charge" cents={session.serviceChargeCents} />
+          <BreakdownRow
+            label="Items"
+            cents={session.subtotalCents}
+            currency={session.currency}
+          />
+          {session.taxCents > 0 ? (
+            <BreakdownRow label="Tax" cents={session.taxCents} currency={session.currency} />
           ) : null}
-          {session.tipCents > 0 ? <BreakdownRow label="Tip" cents={session.tipCents} /> : null}
+          {session.serviceChargeCents > 0 ? (
+            <BreakdownRow
+              label="Service charge"
+              cents={session.serviceChargeCents}
+              currency={session.currency}
+            />
+          ) : null}
+          {session.tipCents > 0 ? (
+            <BreakdownRow label="Tip" cents={session.tipCents} currency={session.currency} />
+          ) : null}
           {session.discountCents > 0 ? (
-            <BreakdownRow label="Discount" cents={-session.discountCents} />
+            <BreakdownRow
+              label="Discount"
+              cents={-session.discountCents}
+              currency={session.currency}
+            />
           ) : null}
           <div className="mt-1 flex items-center justify-between border-t border-border pt-2">
             <span className="font-medium text-text">Total</span>
             <span className="font-semibold text-text">
-              {formatCents(session.grandTotalCents)}
+              {formatCents(session.grandTotalCents, session.currency)}
             </span>
           </div>
         </div>
@@ -212,11 +233,19 @@ export function SummaryView({
   );
 }
 
-function BreakdownRow({ label, cents }: { label: string; cents: number }) {
+function BreakdownRow({
+  label,
+  cents,
+  currency,
+}: {
+  label: string;
+  cents: number;
+  currency: string;
+}) {
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-muted">{label}</span>
-      <span className="text-text">{formatCents(cents)}</span>
+      <span className="text-text">{formatCents(cents, currency)}</span>
     </div>
   );
 }

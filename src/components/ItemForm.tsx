@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getCurrencySymbol } from "@/lib/format";
 
 export interface ItemFormValues {
   name: string;
@@ -11,12 +12,14 @@ export interface ItemFormValues {
 export function ItemForm({
   initial,
   submitLabel,
+  currency = "PHP",
   onSubmit,
   onCancel,
   onDelete,
 }: {
   initial: ItemFormValues;
   submitLabel: string;
+  currency?: string;
   onSubmit: (values: ItemFormValues) => Promise<void>;
   onCancel: () => void;
   onDelete?: () => Promise<void>;
@@ -116,7 +119,7 @@ export function ItemForm({
             Price each
           </label>
           <div className="flex items-center rounded-xl border border-border bg-bg pl-3 focus-within:border-accent">
-            <span className="text-muted">₱</span>
+            <span className="text-muted">{getCurrencySymbol(currency)}</span>
             <input
               id="item-price"
               type="number"

@@ -26,6 +26,7 @@ export function ItemClaimList({
   currentParticipantId,
   allParticipants,
   charges,
+  currency,
   isBillLocked = false,
 }: {
   sessionCode: string;
@@ -34,6 +35,7 @@ export function ItemClaimList({
   currentParticipantId: string;
   allParticipants: { id: string; isPayer: boolean }[];
   charges: ClaimListCharges;
+  currency: string;
   isBillLocked?: boolean;
 }) {
   const [claims, setClaims] = useState(initialClaims);
@@ -144,7 +146,7 @@ export function ItemClaimList({
               <div className="flex-1">
                 <p className="font-medium text-text">{item.name}</p>
                 <p className="text-sm text-muted">
-                  {formatCents(item.totalPriceCents)}
+                  {formatCents(item.totalPriceCents, currency)}
                   {othersClaiming.length > 0
                     ? ` · ${isShared ? "Shared with" : "Claimed by"} ${othersClaiming
                         .map((c) => c.participantName)
@@ -178,7 +180,9 @@ export function ItemClaimList({
 
       <div className="sticky bottom-4 card-lg p-4 text-center">
         <p className="text-sm text-muted">You owe</p>
-        <p className="text-3xl font-semibold text-text">{formatCents(myShareCents)}</p>
+        <p className="text-3xl font-semibold text-text">
+          {formatCents(myShareCents, currency)}
+        </p>
       </div>
     </div>
   );
