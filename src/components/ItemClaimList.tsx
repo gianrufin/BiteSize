@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatCents } from "@/lib/format";
-import { computeParticipantSubtotalCents } from "@/lib/calculations/splitEngine";
+import { computeSplit } from "@/lib/calculations/splitEngine";
 import type { Item } from "@/types";
 
 export interface ClaimWithName {
@@ -11,16 +11,28 @@ export interface ClaimWithName {
   participantName: string;
 }
 
+export interface ClaimListCharges {
+  taxCents: number;
+  serviceChargeCents: number;
+  tipCents: number;
+  discountCents: number;
+  grandTotalCents: number;
+}
+
 export function ItemClaimList({
   sessionCode,
   items,
   initialClaims,
   currentParticipantId,
+  allParticipants,
+  charges,
 }: {
   sessionCode: string;
   items: Item[];
   initialClaims: ClaimWithName[];
   currentParticipantId: string;
+  allParticipants: { id: string; isPayer: boolean }[];
+  charges: ClaimListCharges;
 }) {
   const [claims, setClaims] = useState(initialClaims);
   const [sharedItemIds, setSharedItemIds] = useState(
@@ -29,11 +41,14 @@ export function ItemClaimList({
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const myShareCents = computeParticipantSubtotalCents(
+  const split = computeSplit(
     items.map((item) => ({ id: item.id, totalPriceCents: item.totalPriceCents })),
     claims.map((c) => ({ itemId: c.itemId, participantId: c.participantId })),
-    currentParticipantId,
+    allParticipants,
+    charges,
   );
+  const myShareCents =
+    split.allocations.find((a) => a.participantId === currentParticipantId)?.totalCents ?? 0;
 
   async function claimItem(itemId: string, markShared = false) {
     setError(null);

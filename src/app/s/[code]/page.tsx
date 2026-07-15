@@ -57,6 +57,15 @@ export default async function SessionPage({
     ? participants.find((p) => p.deviceToken === deviceToken)
     : undefined;
 
+  const allParticipants = participants.map((p) => ({ id: p.id, isPayer: p.isPayer }));
+  const charges = {
+    taxCents: session.tax_cents,
+    serviceChargeCents: session.service_charge_cents,
+    tipCents: session.tip_cents,
+    discountCents: session.discount_cents,
+    grandTotalCents: session.grand_total_cents,
+  };
+
   if (isPayer) {
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
@@ -65,12 +74,20 @@ export default async function SessionPage({
           <h1 className="text-2xl font-semibold text-text">
             {session.name ?? "New bill"}
           </h1>
-          <a
-            href={`/s/${session.code}/join`}
-            className="shrink-0 rounded-xl border border-border px-3 py-2 text-sm font-medium text-accent"
-          >
-            Share
-          </a>
+          <div className="flex shrink-0 gap-2">
+            <a
+              href={`/s/${session.code}/join`}
+              className="rounded-xl border border-border px-3 py-2 text-sm font-medium text-accent"
+            >
+              Share
+            </a>
+            <a
+              href={`/s/${session.code}/summary`}
+              className="rounded-xl bg-accent px-3 py-2 text-sm font-medium text-accent-foreground"
+            >
+              Summary
+            </a>
+          </div>
         </div>
         <div className="mt-6">
           <ItemEditor
@@ -101,6 +118,8 @@ export default async function SessionPage({
               items={items}
               initialClaims={claimsWithNames}
               currentParticipantId={currentParticipant.id}
+              allParticipants={allParticipants}
+              charges={charges}
             />
           </div>
         ) : null}
@@ -134,6 +153,8 @@ export default async function SessionPage({
           items={items}
           initialClaims={claimsWithNames}
           currentParticipantId={currentParticipant.id}
+          allParticipants={allParticipants}
+          charges={charges}
         />
       </div>
     </main>
