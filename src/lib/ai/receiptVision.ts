@@ -17,6 +17,7 @@ const RawReceiptItemSchema = z.object({
 const RawReceiptSchema = z.object({
   items: z.array(RawReceiptItemSchema),
   currencyCode: z.string().nullable(),
+  venueName: z.string().nullable(),
 });
 
 export interface ExtractedReceiptItem {
@@ -29,6 +30,7 @@ export interface ExtractedReceiptItem {
 export interface ExtractedReceipt {
   items: ExtractedReceiptItem[];
   currencyCode: string | null;
+  venueName: string | null;
 }
 
 const PROMPT = `This is a photo of a printed receipt. It may be rotated, skewed, creased,
@@ -50,8 +52,11 @@ Also identify the currency the receipt is printed in from its symbol, code, or
 context (e.g. "₱" or "PHP" → "PHP", "$" in a US context → "USD", "€" → "EUR"):
 - currencyCode: the ISO 4217 three-letter currency code, or null if you can't tell.
 
+Also read the name of the restaurant/store printed at the top of the receipt:
+- venueName: the business name as printed, or null if it isn't legible or present.
+
 If the image contains no readable receipt, return an empty items array and null for
-currencyCode.
+currencyCode and venueName.
 
 Respond with JSON only, matching the given schema.`;
 
@@ -80,7 +85,7 @@ export async function extractReceipt(
     },
   });
 
-  const empty: ExtractedReceipt = { items: [], currencyCode: null };
+  const empty: ExtractedReceipt = { items: [], currencyCode: null, venueName: null };
   if (!response.text) return empty;
 
   const parsed = RawReceiptSchema.safeParse(JSON.parse(response.text));
@@ -91,6 +96,8 @@ export async function extractReceipt(
       ? parsed.data.currencyCode
       : null;
 
+  const venueName = parsed.data.venueName?.trim() || null;
+
   return {
     items: parsed.data.items.map((item) => ({
       name: item.name,
@@ -99,5 +106,6 @@ export async function extractReceipt(
       confidence: item.confidence,
     })),
     currencyCode,
+    venueName,
   };
 }

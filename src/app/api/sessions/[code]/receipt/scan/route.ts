@@ -5,10 +5,13 @@ import { recomputeSessionTotals } from "@/lib/session/recomputeTotals";
 import { mapItemRow, mapSessionRow } from "@/lib/mappers";
 import { lockedResponse } from "@/lib/session/locking";
 import { extractReceipt } from "@/lib/ai/receiptVision";
+import type { Database } from "@/types/database";
 
 export const maxDuration = 60;
 
 const SUPPORTED_MEDIA_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+type SessionUpdate = Database["public"]["Tables"]["sessions"]["Update"];
 
 export async function POST(
   request: Request,
@@ -70,11 +73,15 @@ export async function POST(
       item.unitPriceCents >= 0,
   );
 
+  const sessionUpdate: SessionUpdate = {};
   if (extracted.currencyCode !== null) {
-    await supabase
-      .from("sessions")
-      .update({ currency: extracted.currencyCode })
-      .eq("id", session.id);
+    sessionUpdate.currency = extracted.currencyCode;
+  }
+  if (extracted.venueName !== null && !session.venue_name) {
+    sessionUpdate.venue_name = extracted.venueName;
+  }
+  if (Object.keys(sessionUpdate).length > 0) {
+    await supabase.from("sessions").update(sessionUpdate).eq("id", session.id);
   }
 
   if (validItems.length === 0) {

@@ -59,11 +59,17 @@ export interface ItemClaim {
   claimedAt: string;
 }
 
+export type RecentBillStatus = "draft" | "awaiting" | "settled";
+
 export interface RecentBill {
   code: string;
   name: string;
+  venueName?: string | null;
   date: string;
   totalCents: number;
   currency: string;
   role: "payer" | "participant";
+  status: RecentBillStatus;
+  outstandingCents: number;
+  archived?: boolean;
 }

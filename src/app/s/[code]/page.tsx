@@ -4,6 +4,7 @@ import { getDeviceToken } from "@/lib/session/deviceToken";
 import { mapItemRow, mapItemClaimRow, mapParticipantRow } from "@/lib/mappers";
 import { computeEvenSplit, computeSplit } from "@/lib/calculations/splitEngine";
 import { AppHeader } from "@/components/AppHeader";
+import { BillTitleEditor } from "@/components/BillTitleEditor";
 import { ItemEditor } from "@/components/ItemEditor";
 import { ItemClaimList, type ClaimWithName } from "@/components/ItemClaimList";
 import { GCashNumberCard } from "@/components/GCashNumberCard";
@@ -13,6 +14,10 @@ import { RealtimeSync } from "@/components/RealtimeSync";
 import { SplitModeToggle } from "@/components/SplitModeToggle";
 import { NudgeParticipants } from "@/components/NudgeParticipants";
 import { TrackRecentBill } from "@/components/TrackRecentBill";
+import {
+  computePayerRecentBillStatus,
+  computeParticipantRecentBillStatus,
+} from "@/lib/session/billStatus";
 
 export default async function SessionPage({
   params,
@@ -78,14 +83,48 @@ export default async function SessionPage({
   };
 
   if (isPayer) {
+    const payerAllocations =
+      session.split_mode === "even"
+        ? computeEvenSplit(charges.grandTotalCents, allParticipants)
+        : computeSplit(
+            items.map((item) => ({ id: item.id, totalPriceCents: item.totalPriceCents })),
+            claims,
+            allParticipants,
+            charges,
+            session.charge_allocation_mode,
+          ).allocations;
+    const payerAllocationById = new Map(payerAllocations.map((a) => [a.participantId, a]));
+    const nonPayerAllocations = participants
+      .filter((p) => !p.isPayer)
+      .map((p) => ({
+        totalCents: payerAllocationById.get(p.id)?.totalCents ?? 0,
+        paymentStatus: p.paymentStatus,
+      }));
+    const { status: recentBillStatus, outstandingCents } = computePayerRecentBillStatus(
+      items.length,
+      nonPayerAllocations,
+    );
+
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
         <RealtimeSync sessionId={session.id} />
+        <TrackRecentBill
+          code={session.code}
+          name={session.name ?? "New bill"}
+          venueName={session.venue_name}
+          totalCents={session.grand_total_cents}
+          currency={session.currency}
+          role="payer"
+          status={recentBillStatus}
+          outstandingCents={outstandingCents}
+        />
         <AppHeader />
         <div className="mt-6 flex items-start justify-between gap-3">
-          <h1 className="text-2xl font-semibold text-text">
-            {session.name ?? "New bill"}
-          </h1>
+          <BillTitleEditor
+            sessionCode={session.code}
+            initialName={session.name}
+            initialVenueName={session.venue_name}
+          />
           <div className="flex shrink-0 gap-2">
             <a
               href={`/s/${session.code}/join`}
@@ -188,15 +227,21 @@ export default async function SessionPage({
         ).allocations.find((a) => a.participantId === currentParticipant.id)?.totalCents ??
         0);
 
+  const { status: myRecentBillStatus, outstandingCents: myOutstandingCents } =
+    computeParticipantRecentBillStatus(currentParticipant.paymentStatus, myShareCents);
+
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
       <RealtimeSync sessionId={session.id} />
       <TrackRecentBill
         code={session.code}
         name={session.name ?? "Bill"}
+        venueName={session.venue_name}
         totalCents={myShareCents}
         currency={session.currency}
         role="participant"
+        status={myRecentBillStatus}
+        outstandingCents={myOutstandingCents}
       />
       <AppHeader
         right={

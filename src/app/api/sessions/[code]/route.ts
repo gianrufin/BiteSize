@@ -43,6 +43,16 @@ export async function PATCH(
   const update: SessionUpdate = {};
   let touchesCharges = false;
 
+  if ("name" in body) {
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    update.name = name || null;
+  }
+
+  if ("venueName" in body) {
+    const venueName = typeof body.venueName === "string" ? body.venueName.trim() : "";
+    update.venue_name = venueName || null;
+  }
+
   if ("gcashNumber" in body) {
     const rawGcashNumber =
       typeof body.gcashNumber === "string" ? body.gcashNumber.trim() : "";

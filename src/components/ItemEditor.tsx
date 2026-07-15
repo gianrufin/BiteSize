@@ -5,7 +5,6 @@ import { formatCents } from "@/lib/format";
 import { findDuplicateItems } from "@/lib/items/findDuplicateItems";
 import { ItemForm, type ItemFormValues } from "@/components/ItemForm";
 import { ItemRow, LOW_CONFIDENCE_THRESHOLD } from "@/components/ItemRow";
-import { TrackRecentBill } from "@/components/TrackRecentBill";
 import type { Item } from "@/types";
 
 function pairKey(idA: string, idB: string): string {
@@ -177,13 +176,6 @@ export function ItemEditor({
 
   return (
     <div className="flex flex-col gap-4">
-      <TrackRecentBill
-        code={session.code}
-        name={session.name ?? "New bill"}
-        totalCents={session.grandTotalCents}
-        currency={session.currency}
-        role="payer"
-      />
       <div className="card p-4">
         {isLocked ? (
           <p className="mb-1 text-xs font-medium text-amber">🔒 This bill is locked</p>

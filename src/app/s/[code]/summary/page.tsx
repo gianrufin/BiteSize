@@ -9,6 +9,7 @@ import { SummaryView } from "@/components/SummaryView";
 import { PaymentPanel } from "@/components/PaymentPanel";
 import { RealtimeSync } from "@/components/RealtimeSync";
 import { TrackRecentBill } from "@/components/TrackRecentBill";
+import { computeParticipantRecentBillStatus } from "@/lib/session/billStatus";
 
 export default async function SummaryPage({
   params,
@@ -136,15 +137,21 @@ export default async function SummaryPage({
         ).allocations.find((a) => a.participantId === currentParticipant.id)?.totalCents ??
         0);
 
+  const { status: myRecentBillStatus, outstandingCents: myOutstandingCents } =
+    computeParticipantRecentBillStatus(currentParticipant.paymentStatus, myShareCents);
+
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-24 pt-12">
       <RealtimeSync sessionId={session.id} />
       <TrackRecentBill
         code={session.code}
         name={session.name ?? "Bill"}
+        venueName={session.venue_name}
         totalCents={myShareCents}
         currency={session.currency}
         role="participant"
+        status={myRecentBillStatus}
+        outstandingCents={myOutstandingCents}
       />
       <AppHeader
         right={
