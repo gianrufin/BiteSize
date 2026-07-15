@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { getCurrencySymbol } from "@/lib/format";
+import { HelpTooltip } from "@/components/HelpTooltip";
 import type { ChargeAllocationMode, Session } from "@/types";
 
 export interface ChargesValue {
@@ -121,7 +122,10 @@ export function ChargesEditor({
       className="flex flex-col gap-3 card p-4"
     >
       <div>
-        <label className="mb-1 block text-sm text-muted">Split these charges</label>
+        <label className="mb-1 flex items-center gap-1.5 text-sm text-muted">
+          Split these charges
+          <HelpTooltip text="By item share divides tax/service/tip in proportion to what each person ordered. Evenly splits them equally across everyone included, regardless of what they had." />
+        </label>
         <div className="flex rounded-xl border border-border bg-bg p-1">
           {(
             [

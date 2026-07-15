@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatCents } from "@/lib/format";
+import { vibrateSuccess } from "@/lib/feedback/haptics";
 import type { Item } from "@/types";
 
 export interface AssignableParticipant {
@@ -50,6 +51,7 @@ export function AssignItemsPanel({
         body: JSON.stringify({ itemId, participantId }),
       });
       if (!res.ok) throw new Error("Could not reassign item");
+      vibrateSuccess();
       const participantName = participants.find((p) => p.id === participantId)?.name ?? "Someone";
       setClaims((prev) => [
         ...prev.filter((c) => c.itemId !== itemId),
@@ -73,6 +75,7 @@ export function AssignItemsPanel({
         body: JSON.stringify({ participantId: bulkParticipantId }),
       });
       if (!res.ok) throw new Error("Could not assign unclaimed items");
+      vibrateSuccess();
       const participantName = participants.find((p) => p.id === bulkParticipantId)?.name ?? "Someone";
       setClaims((prev) => [
         ...prev,

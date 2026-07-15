@@ -4,6 +4,8 @@ import { useState } from "react";
 import { formatCents } from "@/lib/format";
 import { computeEvenSplit, computeSplit, roundShareCents } from "@/lib/calculations/splitEngine";
 import { offlineFetch } from "@/lib/offline/offlineFetch";
+import { vibrateSuccess } from "@/lib/feedback/haptics";
+import { FirstTimeHint } from "@/components/FirstTimeHint";
 import type { ChargeAllocationMode, Item, SplitMode } from "@/types";
 
 export interface ClaimWithName {
@@ -99,6 +101,7 @@ export function ItemClaimList({
   // requests; failure rolls the local state back and surfaces an error.
   async function claimItem(itemId: string, markShared = false) {
     setError(null);
+    vibrateSuccess();
     const optimisticClaim = {
       itemId,
       participantId: currentParticipantId,
@@ -153,6 +156,10 @@ export function ItemClaimList({
 
   return (
     <div className="flex flex-col gap-4">
+      <FirstTimeHint
+        id="item-claim-basics"
+        message="Tap an item to claim it as yours. Already claimed by someone else? Tap “Split with me” to share it."
+      />
       <div className="flex flex-col gap-2">
         {items.map((item) => {
           const claimantsForItem = claims.filter((c) => c.itemId === item.id);

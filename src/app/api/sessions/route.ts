@@ -17,6 +17,10 @@ export async function POST(request: Request) {
       ? normalizeGcashNumber(rawGcashNumber)
       : null;
 
+  // Prefilled from the device's last-used choice (Settings/remembered) — an
+  // invalid or missing value just falls back to the column's own default.
+  const splitMode = body?.splitMode === "even" ? "even" : body?.splitMode === "items" ? "items" : undefined;
+
   const deviceToken = await getOrCreateDeviceToken();
   const supabase = createServerSupabaseClient();
 
@@ -34,6 +38,7 @@ export async function POST(request: Request) {
         gcash_number: gcashNumber,
         status: "draft",
         currency: "PHP",
+        ...(splitMode ? { split_mode: splitMode } : {}),
       })
       .select("id, code")
       .single();

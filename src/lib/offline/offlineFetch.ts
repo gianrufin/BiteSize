@@ -1,4 +1,5 @@
 import { enqueueMutation } from "@/lib/offline/mutationQueue";
+import { notifySaved } from "@/lib/feedback/autosave";
 
 export type OfflineFetchResult =
   | { status: "ok"; response: Response }
@@ -20,6 +21,7 @@ export async function offlineFetch(
   if (!isKnownOffline) {
     try {
       const response = await fetch(url, options);
+      if (response.ok) notifySaved();
       return { status: "ok", response };
     } catch {
       // Fall through to queueing below.

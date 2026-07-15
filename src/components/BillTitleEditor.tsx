@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useUnsavedChangesWarning } from "@/lib/hooks/useUnsavedChangesWarning";
 
 export function BillTitleEditor({
   sessionCode,
@@ -25,6 +26,14 @@ export function BillTitleEditor({
   const [locationDraft, setLocationDraft] = useState(initialVenueLocation ?? "");
   const [noteDraft, setNoteDraft] = useState(initialNote ?? "");
   const [isSaving, setIsSaving] = useState(false);
+
+  useUnsavedChangesWarning(
+    isEditing &&
+      (nameDraft !== (name ?? "") ||
+        venueDraft !== (venueName ?? "") ||
+        locationDraft !== (venueLocation ?? "") ||
+        noteDraft !== (note ?? "")),
+  );
 
   function startEditing() {
     setNameDraft(name ?? "");

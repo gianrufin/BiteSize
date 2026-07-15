@@ -13,6 +13,7 @@ async function createSession(): Promise<string> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       gcashNumber: getDeviceSettings().defaultGcashNumber ?? undefined,
+      splitMode: getDeviceSettings().lastSplitMode,
     }),
   });
   if (!res.ok) throw new Error("Could not start a new bill");

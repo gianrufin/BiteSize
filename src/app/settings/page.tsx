@@ -6,6 +6,8 @@ import { getDeviceSettings, setDefaultGcashNumber } from "@/lib/session/settings
 import { isValidGcashNumber } from "@/lib/validation/gcash";
 import { AppHeader } from "@/components/AppHeader";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { TextSizeToggle } from "@/components/TextSizeToggle";
+import { MotionToggle } from "@/components/MotionToggle";
 
 export default function SettingsPage() {
   const [gcashNumber, setGcashNumber] = useState("");
@@ -80,6 +82,20 @@ export default function SettingsPage() {
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-medium text-muted">Appearance</h2>
         <ThemeToggle />
+      </section>
+
+      <section className="mt-8">
+        <h2 className="mb-3 text-sm font-medium text-muted">Accessibility</h2>
+        <div className="flex flex-col gap-3">
+          <div>
+            <p className="mb-1.5 text-xs text-muted">Text size</p>
+            <TextSizeToggle />
+          </div>
+          <div>
+            <p className="mb-1.5 text-xs text-muted">Motion</p>
+            <MotionToggle />
+          </div>
+        </div>
       </section>
     </main>
   );

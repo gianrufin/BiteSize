@@ -92,6 +92,36 @@ html[data-theme="dark"] {
   --shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.48), 0 4px 14px rgba(0, 0, 0, 0.3);
 }
 
+html[data-text-size="large"] {
+  font-size: 112.5%;
+}
+
+html[data-text-size="xl"] {
+  font-size: 125%;
+}
+
+/* "System" (no explicit override) follows the OS reduced-motion preference. */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion]) *,
+  html:not([data-motion]) *::before,
+  html:not([data-motion]) *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Explicit user choice always forces reduced motion, regardless of the OS setting. */
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);

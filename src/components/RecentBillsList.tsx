@@ -135,7 +135,10 @@ export function RecentBillsList() {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="py-6 text-center text-sm text-muted">No bills match here.</p>
+        <div className="py-8 text-center">
+          <SearchOffIcon className="mx-auto mb-3 text-muted" />
+          <p className="text-sm text-muted">No bills match here.</p>
+        </div>
       ) : (
         <ul className="flex flex-col gap-2">
           {filtered.map((bill) => (
@@ -219,6 +222,25 @@ function ReceiptIcon() {
     >
       <path d="M6 2h9a2 2 0 0 1 2 2v18l-3-2-2 2-2-2-2 2-2-2-3 2V7l3-3Z" />
       <path d="M9 8h6M9 12h6" />
+    </svg>
+  );
+}
+
+function SearchOffIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      width="40"
+      height="40"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <circle cx="10" cy="10" r="6.5" />
+      <path d="m20 20-4.6-4.6" />
     </svg>
   );
 }

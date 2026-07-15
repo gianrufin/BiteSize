@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useUnsavedChangesWarning } from "@/lib/hooks/useUnsavedChangesWarning";
 import type { Item, Session } from "@/types";
 
 export function PasteItemsForm({
@@ -15,6 +16,8 @@ export function PasteItemsForm({
   const [text, setText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useUnsavedChangesWarning(text.trim().length > 0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,7 +53,7 @@ export function PasteItemsForm({
           rows={5}
           required
           autoFocus
-          className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-text outline-none focus:border-accent"
+          className="w-full scroll-mb-32 rounded-xl border border-border bg-bg px-3 py-2 text-text outline-none focus:border-accent"
         />
       </div>
 

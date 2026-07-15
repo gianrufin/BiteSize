@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { getCurrencySymbol } from "@/lib/format";
 import { autoCapitalize } from "@/lib/items/formatItemName";
+import { useUnsavedChangesWarning } from "@/lib/hooks/useUnsavedChangesWarning";
 import type { RecentItem } from "@/lib/session/recentItems";
 
 export interface ItemFormValues {
@@ -46,6 +47,12 @@ export function ItemForm({
   const [error, setError] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
+  useUnsavedChangesWarning(
+    name !== initial.name ||
+      quantity !== String(initial.quantity) ||
+      priceAmount !== initial.priceAmount,
+  );
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -71,7 +78,8 @@ export function ItemForm({
 
   async function handleDelete() {
     if (!onDelete) return;
-    if (!window.confirm(`Delete "${name || "this item"}"?`)) return;
+    // No confirm dialog — deletion is instant and reversible via the Undo
+    // toast it triggers, so a blocking "are you sure?" would be redundant.
     setIsSubmitting(true);
     try {
       await onDelete();
@@ -129,7 +137,7 @@ export function ItemForm({
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Margherita Pizza"
           required
-          className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-text outline-none focus:border-accent"
+          className="w-full scroll-mb-32 rounded-xl border border-border bg-bg px-3 py-2 text-text outline-none focus:border-accent"
         />
       </div>
       <div className="flex gap-3">

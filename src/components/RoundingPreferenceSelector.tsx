@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { HelpTooltip } from "@/components/HelpTooltip";
 import type { RoundingPreferenceCents, Session } from "@/types";
 
 const OPTIONS: { value: RoundingPreferenceCents; label: string }[] = [
@@ -47,7 +48,10 @@ export function RoundingPreferenceSelector({
 
   return (
     <div className="card p-4">
-      <p className="mb-2 text-sm text-muted">Round each person&apos;s share to nearest</p>
+      <p className="mb-2 flex items-center gap-1.5 text-sm text-muted">
+        Round each person&apos;s share to nearest
+        <HelpTooltip text="Rounds what each person owes to a whole amount for easier cash payment. Any difference from rounding is absorbed by the payer, so the bill total still stays accurate." />
+      </p>
       <div className="flex rounded-xl border border-border bg-bg p-1">
         {OPTIONS.map((option) => (
           <button

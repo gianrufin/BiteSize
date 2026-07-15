@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { setLastSplitMode } from "@/lib/session/settings";
 import type { SplitMode } from "@/types";
 
 const OPTIONS: { value: SplitMode; label: string }[] = [
@@ -34,6 +35,7 @@ export function SplitModeToggle({
         body: JSON.stringify({ splitMode: next }),
       });
       if (!res.ok) throw new Error("Could not update split mode");
+      setLastSplitMode(next);
       router.refresh();
     } catch {
       setSplitMode(previous);

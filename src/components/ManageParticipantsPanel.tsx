@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatCents } from "@/lib/format";
 import { Avatar } from "@/components/Avatar";
+import { showToast } from "@/lib/feedback/toast";
 import { getSuggestedParticipants, recordParticipantUsage } from "@/lib/session/recentParticipants";
 import type { PaymentMethod, PaymentStatus } from "@/types";
 
@@ -72,7 +73,6 @@ export function ManageParticipantsPanel({
   const [newName, setNewName] = useState("");
   const [isAddingParticipant, setIsAddingParticipant] = useState(false);
   const [movingId, setMovingId] = useState<string | null>(null);
-  const [removingId, setRemovingId] = useState<string | null>(null);
   const [isBulkRemoving, setIsBulkRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -119,27 +119,39 @@ export function ManageParticipantsPanel({
     setSelectedIds(allSelected ? new Set() : new Set(guests.map((p) => p.id)));
   }
 
-  async function removeParticipant(id: string) {
-    if (!window.confirm("Remove this participant? Any items they claimed become unclaimed.")) {
-      return;
-    }
-    setRemovingId(id);
-    try {
-      const res = await fetch(`/api/sessions/${sessionCode}/participants/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Could not remove participant");
-      setParticipants((prev) => prev.filter((p) => p.id !== id));
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    } catch {
-      setError("Could not remove that participant — please try again.");
-    } finally {
-      setRemovingId(null);
-    }
+  function removeParticipant(participant: ManagedParticipant) {
+    // Instant optimistic removal — a toast with Undo replaces the blocking
+    // confirm dialog. The real DELETE is delayed so an undo within the grace
+    // window means the server never sees it (their claims stay intact).
+    setParticipants((prev) => prev.filter((p) => p.id !== participant.id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(participant.id);
+      return next;
+    });
+
+    let undone = false;
+    showToast({
+      message: `Removed ${participant.name}`,
+      actionLabel: "Undo",
+      onAction: () => {
+        undone = true;
+        setParticipants((prev) => [...prev, participant]);
+      },
+    });
+
+    setTimeout(async () => {
+      if (undone) return;
+      try {
+        const res = await fetch(`/api/sessions/${sessionCode}/participants/${participant.id}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) throw new Error("Could not remove participant");
+      } catch {
+        setError("Could not remove that participant — please try again.");
+        setParticipants((prev) => [...prev, participant]);
+      }
+    }, 4000);
   }
 
   async function removeSelected() {
@@ -356,9 +368,8 @@ export function ManageParticipantsPanel({
                       {!isLocked ? (
                         <button
                           type="button"
-                          onClick={() => removeParticipant(participant.id)}
-                          disabled={removingId === participant.id}
-                          className="text-sm text-amber disabled:opacity-60"
+                          onClick={() => removeParticipant(participant)}
+                          className="text-sm text-amber"
                         >
                           Remove
                         </button>
@@ -431,7 +442,7 @@ export function ManageParticipantsPanel({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Add a participant by name"
-              className="min-w-0 flex-1 rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent"
+              className="min-w-0 flex-1 scroll-mb-32 rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent"
             />
             <button
               type="submit"

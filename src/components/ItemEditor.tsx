@@ -10,9 +10,11 @@ import {
   updateQueuedMutation,
 } from "@/lib/offline/mutationQueue";
 import { getSuggestedItems, recordItemUsage, type RecentItem } from "@/lib/session/recentItems";
+import { showToast } from "@/lib/feedback/toast";
 import { ItemForm, type ItemFormValues } from "@/components/ItemForm";
 import { ItemRow, LOW_CONFIDENCE_THRESHOLD } from "@/components/ItemRow";
 import { PasteItemsForm } from "@/components/PasteItemsForm";
+import { FirstTimeHint } from "@/components/FirstTimeHint";
 import type { Item } from "@/types";
 
 function pairKey(idA: string, idB: string): string {
@@ -231,34 +233,52 @@ export function ItemEditor({
 
   async function deleteItem(itemId: string) {
     const existing = items.find((item) => item.id === itemId);
-    const deltaCents = -(existing?.totalPriceCents ?? 0);
+    if (!existing) return;
+    const deltaCents = -existing.totalPriceCents;
 
-    const applyLocally = () => {
+    if (isLocalId(itemId)) {
+      // Never synced yet — cancel its queued create outright, nothing on the
+      // server to undo against.
+      const queued = findQueuedMutationByMeta("tempId", itemId);
+      if (queued) cancelQueuedMutation(queued.id);
       setItems((prev) => prev.filter((item) => item.id !== itemId));
       adjustTotalsBy(deltaCents);
       setEditingItemId(null);
-    };
-
-    if (isLocalId(itemId)) {
-      const queued = findQueuedMutationByMeta("tempId", itemId);
-      if (queued) cancelQueuedMutation(queued.id);
-      applyLocally();
       return;
     }
 
-    const result = await offlineFetch(`/api/sessions/${session.code}/items/${itemId}`, {
-      method: "DELETE",
+    // Instant optimistic removal — a toast with Undo is the safety net
+    // instead of a blocking confirm dialog. The real DELETE is delayed so an
+    // undo within the grace window means the server never sees it at all.
+    setItems((prev) => prev.filter((item) => item.id !== itemId));
+    adjustTotalsBy(deltaCents);
+    setEditingItemId(null);
+
+    let undone = false;
+    showToast({
+      message: `Deleted "${existing.name}"`,
+      actionLabel: "Undo",
+      onAction: () => {
+        undone = true;
+        setItems((prev) => [...prev, existing]);
+        adjustTotalsBy(-deltaCents);
+      },
     });
 
-    if (result.status === "queued") {
-      applyLocally();
-      return;
-    }
-
-    if (!result.response.ok) throw new Error("Could not delete item");
-    const { session: updatedSession } = await result.response.json();
-    setItems((prev) => prev.filter((existing) => existing.id !== itemId));
-    setSession(updatedSession);
+    setTimeout(async () => {
+      if (undone) return;
+      try {
+        const result = await offlineFetch(`/api/sessions/${session.code}/items/${itemId}`, {
+          method: "DELETE",
+        });
+        if (result.status === "ok" && result.response.ok) {
+          const data = await result.response.json();
+          setSession(data.session);
+        }
+      } catch {
+        // Best-effort — worst case the item reappears on the next refresh.
+      }
+    }, 4000);
   }
 
   // For an OCR line that actually merged two different items together. Keeps
@@ -358,6 +378,11 @@ export function ItemEditor({
         </p>
       </div>
 
+      <FirstTimeHint
+        id="item-editor-basics"
+        message="Tap any item to edit it, use the +/- to adjust quantity, or the button below to add another."
+      />
+
       {reviewCount > 0 ? (
         <div className="rounded-2xl border border-amber/40 bg-surface p-4">
           <p className="text-sm font-medium text-amber">
@@ -409,6 +434,7 @@ export function ItemEditor({
 
       {items.length === 0 && addMode === "closed" ? (
         <div className="rounded-2xl border border-dashed border-border py-8 text-center">
+          <EmptyPlateIcon className="mx-auto mb-3 text-muted" />
           <p className="font-medium text-text">No items yet</p>
           <p className="mt-1 text-sm text-muted">
             Add what was ordered below to start splitting the bill.
@@ -469,21 +495,40 @@ export function ItemEditor({
           onCancel={() => setAddMode("closed")}
         />
       ) : (
-        <div className="flex gap-2">
+        <div className="sticky bottom-4 flex gap-2 card-lg p-2">
           <button
             onClick={() => setAddMode("form")}
-            className="flex-1 rounded-2xl border border-dashed border-border py-3 text-center font-medium text-accent"
+            className="flex-1 rounded-xl border border-dashed border-border py-3 text-center font-medium text-accent"
           >
             + Add Item Manually
           </button>
           <button
             onClick={() => setAddMode("paste")}
-            className="flex-1 rounded-2xl border border-dashed border-border py-3 text-center font-medium text-accent"
+            className="flex-1 rounded-xl border border-dashed border-border py-3 text-center font-medium text-accent"
           >
             Paste items
           </button>
         </div>
       )}
     </div>
+  );
+}
+
+function EmptyPlateIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      width="40"
+      height="40"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4.5" />
+    </svg>
   );
 }
