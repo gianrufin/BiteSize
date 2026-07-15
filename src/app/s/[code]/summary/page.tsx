@@ -75,6 +75,7 @@ export default async function SummaryPage({
               name: session.name,
               status: session.status,
               currency: session.currency,
+              gcashNumber: session.gcash_number,
               splitMode: session.split_mode,
               chargeAllocationMode: session.charge_allocation_mode,
               roundingPreferenceCents: session.rounding_preference_cents as 1 | 100 | 500 | 1000,
@@ -93,6 +94,12 @@ export default async function SummaryPage({
               isPayer: p.isPayer,
               paymentStatus: p.paymentStatus,
               paymentProofUrl: p.paymentProofUrl,
+              paymentMethod: p.paymentMethod,
+              paymentReference: p.paymentReference,
+              paymentNote: p.paymentNote,
+              amountPaidCents: p.amountPaidCents,
+              paymentSubmittedAt: p.paymentSubmittedAt,
+              paymentConfirmedAt: p.paymentConfirmedAt,
               excludedFromCharges: p.excludedFromCharges,
             }))}
             claims={claims.map((c) => ({
@@ -189,6 +196,12 @@ export default async function SummaryPage({
           gcashQrUrl={session.gcash_qr_url}
           initialPaymentStatus={currentParticipant.paymentStatus}
           initialProofUrl={currentParticipant.paymentProofUrl}
+          initialPaymentMethod={currentParticipant.paymentMethod}
+          initialPaymentReference={currentParticipant.paymentReference}
+          initialPaymentNote={currentParticipant.paymentNote}
+          initialAmountPaidCents={currentParticipant.amountPaidCents}
+          initialSubmittedAt={currentParticipant.paymentSubmittedAt}
+          initialConfirmedAt={currentParticipant.paymentConfirmedAt}
         />
       </div>
     </main>

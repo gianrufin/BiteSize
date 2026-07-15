@@ -306,6 +306,12 @@ export default async function SessionPage({
           gcashQrUrl={session.gcash_qr_url}
           initialPaymentStatus={currentParticipant.paymentStatus}
           initialProofUrl={currentParticipant.paymentProofUrl}
+          initialPaymentMethod={currentParticipant.paymentMethod}
+          initialPaymentReference={currentParticipant.paymentReference}
+          initialPaymentNote={currentParticipant.paymentNote}
+          initialAmountPaidCents={currentParticipant.amountPaidCents}
+          initialSubmittedAt={currentParticipant.paymentSubmittedAt}
+          initialConfirmedAt={currentParticipant.paymentConfirmedAt}
         />
       </div>
 

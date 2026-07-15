@@ -66,6 +66,12 @@ export interface Database {
           is_payer: boolean;
           payment_status: "unpaid" | "submitted" | "confirmed";
           payment_proof_url: string | null;
+          payment_method: "gcash" | "cash" | "other";
+          payment_reference: string | null;
+          payment_note: string | null;
+          amount_paid_cents: number;
+          payment_submitted_at: string | null;
+          payment_confirmed_at: string | null;
           excluded_from_charges: boolean;
           position: number;
           joined_at: string;

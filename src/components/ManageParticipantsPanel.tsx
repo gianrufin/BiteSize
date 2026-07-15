@@ -4,7 +4,22 @@ import { useState } from "react";
 import { formatCents } from "@/lib/format";
 import { Avatar } from "@/components/Avatar";
 import { getSuggestedParticipants, recordParticipantUsage } from "@/lib/session/recentParticipants";
-import type { PaymentStatus } from "@/types";
+import type { PaymentMethod, PaymentStatus } from "@/types";
+
+const METHOD_LABELS: Record<PaymentMethod, string> = {
+  gcash: "GCash",
+  cash: "Cash",
+  other: "Other",
+};
+
+function formatTimestamp(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export interface ManagedParticipant {
   id: string;
@@ -12,6 +27,12 @@ export interface ManagedParticipant {
   isPayer: boolean;
   paymentStatus: PaymentStatus;
   paymentProofUrl: string | null;
+  paymentMethod: PaymentMethod;
+  paymentReference: string | null;
+  paymentNote: string | null;
+  amountPaidCents: number;
+  paymentSubmittedAt: string | null;
+  paymentConfirmedAt: string | null;
   excludedFromCharges: boolean;
 }
 
@@ -26,6 +47,7 @@ export function ManageParticipantsPanel({
   hasCharges,
   getPaymentStatus,
   setPaymentStatus,
+  markPaidDirectly,
   getExcludedFromCharges,
   toggleExcludedFromCharges,
   getShareCents,
@@ -40,6 +62,7 @@ export function ManageParticipantsPanel({
   hasCharges: boolean;
   getPaymentStatus: (participant: ManagedParticipant) => PaymentStatus;
   setPaymentStatus: (participantId: string, next: PaymentStatus) => void;
+  markPaidDirectly: (participantId: string, amountPaidCents: number) => void;
   getExcludedFromCharges: (participant: ManagedParticipant) => boolean;
   toggleExcludedFromCharges: (participantId: string, next: boolean) => void;
   getShareCents: (participantId: string) => number;
@@ -143,6 +166,13 @@ export function ManageParticipantsPanel({
     } finally {
       setIsBulkRemoving(false);
     }
+  }
+
+  function markPaid(participant: ManagedParticipant, amountCents: number) {
+    markPaidDirectly(participant.id, amountCents);
+    setParticipants((prev) =>
+      prev.map((p) => (p.id === participant.id ? { ...p, amountPaidCents: amountCents } : p)),
+    );
   }
 
   async function moveGuest(id: string, direction: -1 | 1) {
@@ -267,62 +297,93 @@ export function ManageParticipantsPanel({
               </div>
 
               {!isPayer ? (
-                <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      paymentStatus === "confirmed"
-                        ? "icon-well text-accent"
+                <div className="mt-2 border-t border-border pt-2">
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        paymentStatus === "confirmed"
+                          ? "icon-well text-accent"
+                          : paymentStatus === "submitted"
+                            ? "bg-amber/15 text-amber"
+                            : "text-muted"
+                      }`}
+                    >
+                      {paymentStatus === "confirmed"
+                        ? "✓ Paid"
                         : paymentStatus === "submitted"
-                          ? "bg-amber/15 text-amber"
-                          : "text-muted"
-                    }`}
-                  >
-                    {paymentStatus === "confirmed"
-                      ? "✓ Paid"
-                      : paymentStatus === "submitted"
-                        ? "Payment sent"
-                        : "Unpaid"}
-                  </span>
-                  <div className="flex items-center gap-3">
-                    {participant.paymentProofUrl ? (
-                      <a
-                        href={participant.paymentProofUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm font-medium text-accent"
-                      >
-                        View proof
-                      </a>
-                    ) : null}
-                    {paymentStatus === "submitted" ? (
-                      <button
-                        type="button"
-                        onClick={() => setPaymentStatus(participant.id, "confirmed")}
-                        className="text-sm font-medium text-accent"
-                      >
-                        Confirm
-                      </button>
-                    ) : null}
-                    {paymentStatus !== "unpaid" ? (
-                      <button
-                        type="button"
-                        onClick={() => setPaymentStatus(participant.id, "unpaid")}
-                        className="text-sm text-muted"
-                      >
-                        Reset
-                      </button>
-                    ) : null}
-                    {!isLocked ? (
-                      <button
-                        type="button"
-                        onClick={() => removeParticipant(participant.id)}
-                        disabled={removingId === participant.id}
-                        className="text-sm text-amber disabled:opacity-60"
-                      >
-                        Remove
-                      </button>
-                    ) : null}
+                          ? "Payment sent"
+                          : "Unpaid"}
+                      {paymentStatus !== "unpaid" ? ` · ${METHOD_LABELS[participant.paymentMethod]}` : ""}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      {participant.paymentProofUrl ? (
+                        <a
+                          href={participant.paymentProofUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium text-accent"
+                        >
+                          View proof
+                        </a>
+                      ) : null}
+                      {paymentStatus === "unpaid" ? (
+                        <button
+                          type="button"
+                          onClick={() => markPaid(participant, amountCents)}
+                          className="text-sm font-medium text-accent"
+                        >
+                          Mark paid
+                        </button>
+                      ) : null}
+                      {paymentStatus === "submitted" ? (
+                        <button
+                          type="button"
+                          onClick={() => setPaymentStatus(participant.id, "confirmed")}
+                          className="text-sm font-medium text-accent"
+                        >
+                          Confirm
+                        </button>
+                      ) : null}
+                      {paymentStatus !== "unpaid" ? (
+                        <button
+                          type="button"
+                          onClick={() => setPaymentStatus(participant.id, "unpaid")}
+                          className="text-sm text-muted"
+                        >
+                          Reset
+                        </button>
+                      ) : null}
+                      {!isLocked ? (
+                        <button
+                          type="button"
+                          onClick={() => removeParticipant(participant.id)}
+                          disabled={removingId === participant.id}
+                          className="text-sm text-amber disabled:opacity-60"
+                        >
+                          Remove
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
+
+                  {paymentStatus !== "unpaid" ? (
+                    <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted">
+                      {amountCents - participant.amountPaidCents > 0 ? (
+                        <p className="font-medium text-amber">
+                          {formatCents(amountCents - participant.amountPaidCents, currency)} remaining
+                        </p>
+                      ) : null}
+                      {participant.paymentReference ? <p>Ref: {participant.paymentReference}</p> : null}
+                      {participant.paymentNote ? (
+                        <p className="italic">&quot;{participant.paymentNote}&quot;</p>
+                      ) : null}
+                      {participant.paymentConfirmedAt ? (
+                        <p>Confirmed {formatTimestamp(participant.paymentConfirmedAt)}</p>
+                      ) : participant.paymentSubmittedAt ? (
+                        <p>Sent {formatTimestamp(participant.paymentSubmittedAt)}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 

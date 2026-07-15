@@ -9,8 +9,9 @@ import { Confetti } from "@/components/Confetti";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { ExportSummaryImage } from "@/components/ExportSummaryImage";
 import { ManageParticipantsPanel } from "@/components/ManageParticipantsPanel";
+import { PaymentReminder } from "@/components/PaymentReminder";
 import { RoundingPreferenceSelector } from "@/components/RoundingPreferenceSelector";
-import type { Item, PaymentStatus, Session } from "@/types";
+import type { Item, PaymentMethod, PaymentStatus, Session } from "@/types";
 
 export interface SummaryParticipant {
   id: string;
@@ -18,6 +19,12 @@ export interface SummaryParticipant {
   isPayer: boolean;
   paymentStatus: PaymentStatus;
   paymentProofUrl: string | null;
+  paymentMethod: PaymentMethod;
+  paymentReference: string | null;
+  paymentNote: string | null;
+  amountPaidCents: number;
+  paymentSubmittedAt: string | null;
+  paymentConfirmedAt: string | null;
   excludedFromCharges: boolean;
 }
 
@@ -39,6 +46,7 @@ export function SummaryView({
     | "name"
     | "status"
     | "currency"
+    | "gcashNumber"
     | "splitMode"
     | "chargeAllocationMode"
     | "roundingPreferenceCents"
@@ -101,6 +109,30 @@ export function SummaryView({
         },
       );
       if (!res.ok) throw new Error("Could not update payment status");
+    } catch {
+      setStatusOverrides((prev) => {
+        const next = { ...prev };
+        delete next[participantId];
+        return next;
+      });
+    }
+  }
+
+  // One-tap payer action for an in-person/cash handoff: jumps straight from
+  // unpaid to confirmed with the full amount, skipping the normal
+  // submit-then-confirm round trip.
+  async function markPaidDirectly(participantId: string, amountPaidCents: number) {
+    setStatusOverrides((prev) => ({ ...prev, [participantId]: "confirmed" }));
+    try {
+      const res = await fetch(
+        `/api/sessions/${sessionCode}/participants/${participantId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentStatus: "confirmed", amountPaidCents }),
+        },
+      );
+      if (!res.ok) throw new Error("Could not mark as paid");
     } catch {
       setStatusOverrides((prev) => {
         const next = { ...prev };
@@ -277,6 +309,16 @@ export function SummaryView({
         </div>
       ) : null}
 
+      <PaymentReminder
+        billName={session.name ?? "Bill"}
+        sessionCode={sessionCode}
+        currency={session.currency}
+        gcashNumber={session.gcashNumber}
+        participants={nonPayerParticipants
+          .filter((p) => getPaymentStatus(p) !== "confirmed")
+          .map((p) => ({ id: p.id, name: p.name, amountCents: getShareCents(p.id) }))}
+      />
+
       {isLocked ? (
         <div className="card p-4 text-center text-sm text-muted">
           Charges are locked. Unlock the bill to make changes.
@@ -317,6 +359,7 @@ export function SummaryView({
         hasCharges={hasCharges}
         getPaymentStatus={getPaymentStatus}
         setPaymentStatus={setPaymentStatus}
+        markPaidDirectly={markPaidDirectly}
         getExcludedFromCharges={getExcludedFromCharges}
         toggleExcludedFromCharges={toggleExcludedFromCharges}
         getShareCents={getShareCents}

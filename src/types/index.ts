@@ -2,6 +2,7 @@ export type SessionStatus = "draft" | "open" | "locked";
 export type ItemSource = "ocr" | "manual";
 export type SplitMode = "items" | "even";
 export type PaymentStatus = "unpaid" | "submitted" | "confirmed";
+export type PaymentMethod = "gcash" | "cash" | "other";
 export type ChargeAllocationMode = "proportional" | "equal";
 export type RoundingPreferenceCents = 1 | 100 | 500 | 1000;
 
@@ -53,6 +54,12 @@ export interface Participant {
   isPayer: boolean;
   paymentStatus: PaymentStatus;
   paymentProofUrl: string | null;
+  paymentMethod: PaymentMethod;
+  paymentReference: string | null;
+  paymentNote: string | null;
+  amountPaidCents: number;
+  paymentSubmittedAt: string | null;
+  paymentConfirmedAt: string | null;
   excludedFromCharges: boolean;
   position: number;
   joinedAt: string;

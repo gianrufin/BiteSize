@@ -13,6 +13,13 @@ function isPaymentStatus(value: unknown): value is PaymentStatusValue {
   return typeof value === "string" && (VALID_STATUSES as readonly string[]).includes(value);
 }
 
+const VALID_METHODS = ["gcash", "cash", "other"] as const;
+type PaymentMethodValue = (typeof VALID_METHODS)[number];
+
+function isPaymentMethod(value: unknown): value is PaymentMethodValue {
+  return typeof value === "string" && (VALID_METHODS as readonly string[]).includes(value);
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ code: string; participantId: string }> },
@@ -67,6 +74,56 @@ export async function PATCH(
       );
     }
     update.payment_status = body.paymentStatus;
+
+    const now = new Date().toISOString();
+    if (body.paymentStatus === "submitted") {
+      update.payment_submitted_at = now;
+    } else if (body.paymentStatus === "confirmed") {
+      update.payment_confirmed_at = now;
+      // Confirming always implies a submission happened, even if the payer
+      // jumped straight from unpaid to confirmed for an in-person/cash
+      // payment — keep the timestamps consistent either way.
+      if (!participant.payment_submitted_at) update.payment_submitted_at = now;
+    } else if (body.paymentStatus === "unpaid") {
+      // A reset clears the specifics of the payment attempt being undone,
+      // not just the status pill.
+      update.payment_reference = null;
+      update.payment_note = null;
+      update.amount_paid_cents = 0;
+      update.payment_submitted_at = null;
+      update.payment_confirmed_at = null;
+    }
+  }
+
+  if ("paymentMethod" in body) {
+    if (!isPaymentMethod(body.paymentMethod)) {
+      return NextResponse.json(
+        { error: "paymentMethod must be 'gcash', 'cash', or 'other'" },
+        { status: 400 },
+      );
+    }
+    update.payment_method = body.paymentMethod;
+  }
+
+  if ("paymentReference" in body) {
+    const ref = typeof body.paymentReference === "string" ? body.paymentReference.trim() : "";
+    update.payment_reference = ref || null;
+  }
+
+  if ("paymentNote" in body) {
+    const note = typeof body.paymentNote === "string" ? body.paymentNote.trim() : "";
+    update.payment_note = note || null;
+  }
+
+  if ("amountPaidCents" in body) {
+    const cents = Math.round(Number(body.amountPaidCents));
+    if (!Number.isFinite(cents) || cents < 0) {
+      return NextResponse.json(
+        { error: "amountPaidCents must be a non-negative number" },
+        { status: 400 },
+      );
+    }
+    update.amount_paid_cents = cents;
   }
 
   if ("excludedFromCharges" in body) {
