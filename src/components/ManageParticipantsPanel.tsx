@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatCents } from "@/lib/format";
 import { Avatar } from "@/components/Avatar";
 import { showToast } from "@/lib/feedback/toast";
 import { getSuggestedParticipants, recordParticipantUsage } from "@/lib/session/recentParticipants";
-import type { PaymentMethod, PaymentStatus } from "@/types";
+import { createGroup, getGroups } from "@/lib/session/groups";
+import type { Group, PaymentMethod, PaymentStatus } from "@/types";
 
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   gcash: "GCash",
@@ -75,6 +76,15 @@ export function ManageParticipantsPanel({
   const [movingId, setMovingId] = useState<string | null>(null);
   const [isBulkRemoving, setIsBulkRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [isAddingGroup, setIsAddingGroup] = useState(false);
+
+  useEffect(() => {
+    // localStorage isn't available during SSR — this sync-on-mount is the
+    // external-system case the lint rule means to exempt.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setGroups(getGroups());
+  }, []);
 
   const payer = participants.find((p) => p.isPayer);
   const guests = participants.filter((p) => !p.isPayer);
@@ -104,6 +114,29 @@ export function ManageParticipantsPanel({
     } finally {
       setIsAddingParticipant(false);
     }
+  }
+
+  async function addGroup(group: Group) {
+    const existingNames = new Set(participants.map((p) => p.name.toLowerCase()));
+    const toAdd = group.memberNames.filter((name) => !existingNames.has(name.toLowerCase()));
+    if (toAdd.length === 0) return;
+
+    setIsAddingGroup(true);
+    // Sequential, not Promise.all — each add reads the current participant
+    // count to assign its position, so parallel calls would race on that count.
+    for (const name of toAdd) {
+      await addParticipant(name);
+    }
+    setIsAddingGroup(false);
+  }
+
+  function saveAsGroup() {
+    if (guests.length === 0) return;
+    const name = window.prompt("Name this group (e.g. Barkada)", "")?.trim();
+    if (!name) return;
+    createGroup(name, guests.map((g) => g.name));
+    setGroups(getGroups());
+    showToast({ message: `Saved "${name}" as a group` });
   }
 
   function toggleSelected(id: string) {
@@ -416,6 +449,21 @@ export function ManageParticipantsPanel({
 
       {!isLocked ? (
         <div className="mt-3 flex flex-col gap-2">
+          {groups.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {groups.map((group) => (
+                <button
+                  key={group.id}
+                  type="button"
+                  disabled={isAddingGroup || isAddingParticipant}
+                  onClick={() => addGroup(group)}
+                  className="rounded-full border border-accent px-2.5 py-1 text-xs font-medium text-accent disabled:opacity-60"
+                >
+                  + {group.name} ({group.memberNames.length})
+                </button>
+              ))}
+            </div>
+          ) : null}
           {suggestions.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {suggestions.map((name) => (
@@ -460,6 +508,15 @@ export function ManageParticipantsPanel({
               + Guest
             </button>
           </form>
+          {guests.length > 0 ? (
+            <button
+              type="button"
+              onClick={saveAsGroup}
+              className="self-start text-xs font-medium text-muted"
+            >
+              Save these people as a group
+            </button>
+          ) : null}
         </div>
       ) : null}
 

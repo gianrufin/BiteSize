@@ -86,3 +86,23 @@ export interface RecentBill {
   outstandingCents: number;
   archived?: boolean;
 }
+
+export interface Group {
+  id: string;
+  name: string;
+  memberNames: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PersonBalance {
+  name: string;
+  currency: string;
+  netOwedCents: number;
+  totalOwedCents: number;
+  totalPaidCents: number;
+  billCount: number;
+  unsettledBillCount: number;
+  lastBillAt: string;
+  lastUnpaidSessionCode: string | null;
+}
