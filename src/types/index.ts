@@ -31,6 +31,28 @@ export interface Session {
   grandTotalCents: number;
   createdAt: string;
   lockedAt: string | null;
+  tripId: string | null;
+}
+
+export type TripStatus = "open" | "settled";
+
+export interface Trip {
+  id: string;
+  code: string;
+  name: string;
+  organizerDeviceToken: string;
+  currency: string;
+  status: TripStatus;
+  createdAt: string;
+  settledAt: string | null;
+}
+
+export interface TripPersonBalance {
+  name: string;
+  netOwedCents: number;
+  totalOwedCents: number;
+  totalPaidCents: number;
+  billCount: number;
 }
 
 export interface Item {

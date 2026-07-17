@@ -27,12 +27,32 @@ export interface Database {
           grand_total_cents: number;
           created_at: string;
           locked_at: string | null;
+          trip_id: string | null;
         };
         Insert: Partial<Database["public"]["Tables"]["sessions"]["Row"]> & {
           code: string;
           payer_device_token: string;
         };
         Update: Partial<Database["public"]["Tables"]["sessions"]["Row"]>;
+        Relationships: [];
+      };
+      trips: {
+        Row: {
+          id: string;
+          code: string;
+          name: string;
+          organizer_device_token: string;
+          currency: string;
+          status: "open" | "settled";
+          created_at: string;
+          settled_at: string | null;
+        };
+        Insert: Partial<Database["public"]["Tables"]["trips"]["Row"]> & {
+          code: string;
+          name: string;
+          organizer_device_token: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["trips"]["Row"]>;
         Relationships: [];
       };
       items: {

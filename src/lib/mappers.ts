@@ -1,10 +1,11 @@
-import type { Item, ItemClaim, Participant, Session } from "@/types";
+import type { Item, ItemClaim, Participant, Session, Trip } from "@/types";
 import type { Database } from "@/types/database";
 
 type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
 type ItemRow = Database["public"]["Tables"]["items"]["Row"];
 type ParticipantRow = Database["public"]["Tables"]["participants"]["Row"];
 type ItemClaimRow = Database["public"]["Tables"]["item_claims"]["Row"];
+type TripRow = Database["public"]["Tables"]["trips"]["Row"];
 
 export function mapSessionRow(row: SessionRow): Session {
   return {
@@ -32,6 +33,20 @@ export function mapSessionRow(row: SessionRow): Session {
     grandTotalCents: row.grand_total_cents,
     createdAt: row.created_at,
     lockedAt: row.locked_at,
+    tripId: row.trip_id,
+  };
+}
+
+export function mapTripRow(row: TripRow): Trip {
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    organizerDeviceToken: row.organizer_device_token,
+    currency: row.currency,
+    status: row.status,
+    createdAt: row.created_at,
+    settledAt: row.settled_at,
   };
 }
 
