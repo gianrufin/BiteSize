@@ -6,6 +6,7 @@ export type MotionPreference = "system" | "reduced";
 
 export interface DeviceSettings {
   defaultGcashNumber: string | null;
+  defaultGcashQrUrl: string | null;
   theme: ThemePreference;
   textSize: TextSizePreference;
   motion: MotionPreference;
@@ -19,6 +20,7 @@ const STORAGE_KEY = "bitesize_settings";
 
 const DEFAULTS: DeviceSettings = {
   defaultGcashNumber: null,
+  defaultGcashQrUrl: null,
   theme: "system",
   textSize: "default",
   motion: "system",
@@ -47,6 +49,10 @@ export function getDeviceSettings(): DeviceSettings {
 
 export function setDefaultGcashNumber(value: string | null): void {
   writeSettings({ ...readSettings(), defaultGcashNumber: value });
+}
+
+export function setDefaultGcashQrUrl(value: string | null): void {
+  writeSettings({ ...readSettings(), defaultGcashQrUrl: value });
 }
 
 export function setThemePreference(theme: ThemePreference): void {

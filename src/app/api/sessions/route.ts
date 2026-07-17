@@ -17,6 +17,12 @@ export async function POST(request: Request) {
       ? normalizeGcashNumber(rawGcashNumber)
       : null;
 
+  // Prefilled from the device's saved default QR image (Settings) — this is just
+  // a Supabase Storage URL the device already uploaded, not user input to validate.
+  const gcashQrUrl = typeof body?.gcashQrUrl === "string" && body.gcashQrUrl.trim()
+    ? body.gcashQrUrl.trim()
+    : null;
+
   // Prefilled from the device's last-used choice (Settings/remembered) — an
   // invalid or missing value just falls back to the column's own default.
   const splitMode = body?.splitMode === "even" ? "even" : body?.splitMode === "items" ? "items" : undefined;
@@ -36,6 +42,7 @@ export async function POST(request: Request) {
         payer_device_token: deviceToken,
         name: name || null,
         gcash_number: gcashNumber,
+        gcash_qr_url: gcashQrUrl,
         status: "draft",
         currency: "PHP",
         ...(splitMode ? { split_mode: splitMode } : {}),

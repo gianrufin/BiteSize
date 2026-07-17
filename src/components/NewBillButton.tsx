@@ -13,6 +13,7 @@ async function createSession(): Promise<string> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       gcashNumber: getDeviceSettings().defaultGcashNumber ?? undefined,
+      gcashQrUrl: getDeviceSettings().defaultGcashQrUrl ?? undefined,
       splitMode: getDeviceSettings().lastSplitMode,
     }),
   });

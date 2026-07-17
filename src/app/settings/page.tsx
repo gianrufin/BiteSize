@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getDeviceSettings, setDefaultGcashNumber } from "@/lib/session/settings";
 import { isValidGcashNumber } from "@/lib/validation/gcash";
 import { AppHeader } from "@/components/AppHeader";
+import { DeviceGcashQrCard } from "@/components/DeviceGcashQrCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { TextSizeToggle } from "@/components/TextSizeToggle";
 import { MotionToggle } from "@/components/MotionToggle";
@@ -77,6 +78,9 @@ export default function SettingsPage() {
             {saved ? "Saved!" : "Save"}
           </button>
         </form>
+        <div className="mt-3">
+          <DeviceGcashQrCard />
+        </div>
       </section>
 
       <section className="mt-8">
