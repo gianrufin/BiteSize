@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="An interactive pitch for BiteSize: scan a receipt, share a link, everyone claims and pays their share." />
+<title>BiteSize — Split it fair. Pay it easy.</title>
+<style>
+  :root {
+    --counter: #4a3c2c;
+    --counter-deep: #3a2f22;
+    --paper: #f8f5ec;
+    --paper-shadow: #e9e2cd;
+    --ink: #26231d;
+    --sage: #5f7548;
+    --sage-soft: #dfe6cf;
+    --sage-text: #46592f;
+    --gold: #a8752a;
+    --line: #ddd5bd;
+    --muted: #837c68;
+    --focus: #2f6fed;
+    color-scheme: light;
+  }
+
+  :root[data-theme="dark"] {
+    --counter: #16130f;
+    --counter-deep: #0c0a08;
+    --paper: #efe9d8;
+    --paper-shadow: #ddd3b6;
+    --ink: #241f16;
+    --sage: #4c6238;
+    --sage-soft: #cdd9b6;
+    --sage-text: #3a4b2a;
+    --gold: #8f6222;
+    --line: #cfc4a0;
+    --muted: #6f6752;
+    color-scheme: dark;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --counter: #16130f;
+      --counter-deep: #0c0a08;
+      --paper: #efe9d8;
+      --paper-shadow: #ddd3b6;
+      --ink: #241f16;
+      --sage: #4c6238;
+      --sage-soft: #cdd9b6;
+      --sage-text: #3a4b2a;
+      --gold: #8f6222;
+      --line: #cfc4a0;
+      --muted: #6f6752;
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--counter);
+    background-image:
+      radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, var(--counter) 70%, white 6%) 0%, var(--counter) 55%),
+      repeating-linear-gradient(115deg, rgba(0,0,0,0.05) 0 2px, transparent 2px 60px);
+    color: var(--ink);
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .mono {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+  }
+
+  .serif {
+    font-family: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  }
+
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+
+  a { color: inherit; }
+
+  button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+  button:focus-visible,
+  a:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem clamp(1rem, 4vw, 2.5rem);
+    background: color-mix(in srgb, var(--counter-deep) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: var(--paper);
+    text-decoration: none;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+  }
+  .brand .mark {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--sage);
+    display: grid;
+    place-items: center;
+    color: var(--paper);
+    font-size: 0.65rem;
+    font-weight: 800;
+  }
+
+  .ticker {
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    color: color-mix(in srgb, var(--paper) 55%, transparent);
+    display: flex;
+    align-items: baseline;
+    gap: 0.4em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .ticker b {
+    color: var(--paper);
+    font-size: 0.85rem;
+  }
+
+  .theme-btn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.18);
+    color: var(--paper);
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .theme-btn:hover { border-color: rgba(255,255,255,0.4); }
+
+  /* ---------- receipt column ---------- */
+  .receipt {
+    max-width: 30rem;
+    margin: 0 auto;
+    padding: 0 clamp(0.75rem, 4vw, 1.25rem) 4rem;
+  }
+
+  .strip {
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.55), 0 2px 0 rgba(0,0,0,0.06);
+    position: relative;
+  }
+
+  .tear {
+    height: 12px;
+    width: 100%;
+    background:
+      radial-gradient(circle at 8px 0, transparent 7px, var(--paper) 7.5px) 0 -6px / 16px 12px repeat-x;
+  }
+  .tear.top { transform: scaleY(-1); }
+
+  .section {
+    padding: clamp(1.5rem, 5vw, 2.25rem) clamp(1.25rem, 6vw, 2rem);
+  }
+
+  .perf {
+    border-top: 1px dashed var(--line);
+    margin: 0 clamp(1.25rem, 6vw, 2rem);
+  }
+
+  /* ---------- hero ---------- */
+  .hero .eyebrow {
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--sage-text);
+    font-weight: 700;
+  }
+  .hero h1 {
+    margin-top: 0.6rem;
+    font-size: clamp(2.1rem, 8vw, 2.85rem);
+    line-height: 1.04;
+    letter-spacing: -0.01em;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--sage-text);
+  }
+  .hero .sub {
+    margin-top: 0.9rem;
+    font-size: 1rem;
+    line-height: 1.55;
+    color: color-mix(in srgb, var(--ink) 78%, var(--muted));
+    max-width: 34ch;
+  }
+
+  .cta-row {
+    margin-top: 1.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.62rem 1.05rem;
+    border-radius: 0.65rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid transparent;
+  }
+  .btn-primary {
+    background: var(--sage);
+    color: var(--paper);
+    box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--sage) 70%, transparent);
+  }
+  .btn-primary:hover { background: var(--sage-text); }
+  .btn-ghost {
+    border-color: var(--line);
+    color: var(--ink);
+  }
+  .btn-ghost:hover { border-color: var(--sage); }
+
+  .receipt-meta {
+    margin-top: 1.6rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 1rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .receipt-meta .ink { color: var(--ink); }
+
+  /* ---------- line items (problem/solution + features) ---------- */
+  .kicker {
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 0.9rem;
+  }
+
+  .compare {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .compare .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+    font-size: 0.92rem;
+  }
+  .compare .row .label { color: var(--muted); }
+  .compare .row.old .val { text-decoration: line-through; color: var(--muted); }
+  .compare .row.new .val { color: var(--sage-text); font-weight: 700; }
+  .leader {
+    flex: 1;
+    border-bottom: 1px dotted var(--line);
+    transform: translateY(-0.35em);
+    min-width: 1rem;
+  }
+
+  .group {
+    margin-bottom: 1.7rem;
+  }
+  .group:last-child { margin-bottom: 0; }
+  .group .gname {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ink);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+  }
+  .group .gname .tag {
+    font-size: 0.65rem;
+    color: var(--sage-text);
+    font-weight: 700;
+  }
+  .item-line {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.42rem 0;
+    font-size: 0.86rem;
+    line-height: 1.4;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  }
+  .item-line:last-child { border-bottom: none; }
+  .item-line .dot {
+    color: var(--sage-text);
+    flex-shrink: 0;
+  }
+  .item-line b { color: var(--ink); }
+  .item-line span.desc { color: var(--muted); }
+
+  .subtotal {
+    margin-top: 1.1rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--sage-text);
+  }
+
+  /* ---------- phone demo ---------- */
+  .demo-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.1rem;
+  }
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    justify-content: center;
+  }
+  .tab {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 0.32rem 0.68rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .tab[aria-selected="true"] {
+    background: var(--sage);
+    border-color: var(--sage);
+    color: var(--paper);
+  }
+
+  .phone {
+    width: 100%;
+    max-width: 19.5rem;
+    aspect-ratio: 9 / 18.5;
+    border-radius: 2.1rem;
+    background: #efe9da;
+    border: 7px solid var(--counter-deep);
+    box-shadow: 0 26px 46px -18px rgba(0,0,0,0.6);
+    position: relative;
+    overflow: hidden;
+  }
+  .phone::before {
+    content: "";
+    position: absolute;
+    top: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 34%; height: 5px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.28);
+    z-index: 5;
+  }
+  .screen {
+    position: absolute;
+    inset: 0;
+    padding: 1.6rem 0.85rem 0.85rem;
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+    color: #2c2820;
+    font-size: 0.72rem;
+    overflow: hidden;
+  }
+  .screen[data-active="true"] { display: flex; }
+
+  /* phone UI tokens (mirrors the live app's own theme) */
+  .app-card {
+    background: #fffdf8;
+    border: 1px solid #ece5d2;
+    border-radius: 0.85rem;
+    padding: 0.55rem 0.7rem;
+  }
+  .app-muted { color: #948c78; }
+  .app-accent { color: #5f7548; }
+  .app-pill {
+    display: inline-block;
+    background: #e4e9d5;
+    color: #4a5c37;
+    border-radius: 999px;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+  }
+  .app-title { font-weight: 700; font-size: 0.85rem; color: #241f16; }
+  .app-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .app-avatar {
+    width: 22px; height: 22px; border-radius: 999px;
+    display: grid; place-items: center;
+    font-size: 0.6rem; font-weight: 800; color: #fff;
+    flex-shrink: 0;
+  }
+  .app-btn {
+    background: #7c9066;
+    color: #fff;
+    text-align: center;
+    border-radius: 0.6rem;
+    padding: 0.45rem;
+    font-weight: 700;
+    font-size: 0.7rem;
+    border: none;
+  }
+  .app-sticky {
+    margin-top: auto;
+    background: #fffdf8;
+    border: 1px solid #ece5d2;
+    border-radius: 0.85rem;
+    padding: 0.55rem 0.7rem;
+    text-align: center;
+    box-shadow: 0 8px 18px -10px rgba(0,0,0,0.3);
+  }
+  .claim-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #fffdf8;
+    border: 1px solid #ece5d2;
+    border-radius: 0.7rem;
+    padding: 0.4rem 0.55rem;
+  }
+  .claim-box {
+    width: 15px; height: 15px;
+    border-radius: 0.3rem;
+    border: 1.5px solid #cfc7b0;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+  }
+  .claim-item.on .claim-box { background: #7c9066; border-color: #7c9066; color: #fff; }
+  .claim-item.on { border-color: #b9c7a8; }
+
+  .caption {
+    margin-top: 0.2rem;
+    font-size: 0.78rem;
+    color: color-mix(in srgb, var(--ink) 70%, var(--muted));
+    text-align: center;
+    max-width: 27ch;
+  }
+
+  /* ---------- stack strip ---------- */
+  .stack-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+  .stack-chip {
+    font-size: 0.68rem;
+    padding: 0.28rem 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    color: var(--muted);
+  }
+
+  /* ---------- footer / stamp ---------- */
+  .stamp-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.9rem;
+  }
+  .stamp {
+    border: 2.5px solid var(--gold);
+    color: var(--gold);
+    border-radius: 999px;
+    padding: 0.55rem 1.1rem;
+    font-family: ui-monospace, monospace;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    transform: rotate(-4deg);
+  }
+
+  .foot-total {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--sage-text);
+    padding-top: 0.8rem;
+    border-top: 2px solid var(--ink);
+  }
+  .foot-sub {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 0.35rem;
+  }
+
+  .below {
+    margin-top: 1.8rem;
+    text-align: center;
+    color: color-mix(in srgb, var(--paper) 60%, transparent);
+    font-size: 0.72rem;
+    line-height: 1.7;
+  }
+  .below a { color: var(--paper); text-decoration: underline; text-underline-offset: 3px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.in { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+
+<div class="topbar">
+  <a class="brand" href="#top">
+    <span class="mark">B</span>
+    BiteSize
+  </a>
+  <div class="ticker mono" aria-live="polite">
+    RUNNING TOTAL <b id="tickerVal">₱0</b>
+  </div>
+  <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle color theme">Dark</button>
+</div>
+
+<main class="receipt" id="top">
+  <div class="strip">
+    <div class="tear top" aria-hidden="true"></div>
+
+    <!-- HERO -->
+    <section class="section hero reveal">
+      <p class="eyebrow mono">No. 001 — The Pitch</p>
+      <h1 class="serif">Nobody should do <em>long division</em> after dinner.</h1>
+      <p class="sub">BiteSize turns a photo of the check into a shared link. Everyone taps what they ordered, sees exactly what they owe, and pays you back — no spreadsheet, no app download, no account.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://bitesize-eosin.vercel.app" target="_blank" rel="noopener">Try the live app →</a>
+        <a class="btn btn-ghost" href="https://github.com/gianrufin/BiteSize" target="_blank" rel="noopener">View source</a>
+      </div>
+      <div class="receipt-meta mono">
+        <span>PLATFORM<br /><span class="ink">Mobile web · PWA</span></span>
+        <span>PARTY SIZE<br /><span class="ink">2 – 20 diners</span></span>
+        <span>SIGN-UP<br /><span class="ink">None required</span></span>
+        <span>SPLIT TIME<br /><span class="ink">&lt; 90 seconds</span></span>
+      </div>
+    </section>
+
+    <div class="perf"></div>
+
+    <!-- PROBLEM -->
+    <section class="section reveal">
+      <p class="kicker">Before / After</p>
+      <div class="compare mono">
+        <div class="row old"><span class="label">Splitting by memory</span><span class="leader"></span><span class="val">"I think I had the pasta?"</span></div>
+        <div class="row old"><span class="label">Splitting evenly</span><span class="leader"></span><span class="val">Punishes the water-drinker</span></div>
+        <div class="row old"><span class="label">Splitting by screenshot</span><span class="leader"></span><span class="val">Someone always forgets tip</span></div>
+        <div class="row new"><span class="label">Splitting with BiteSize</span><span class="leader"></span><span class="val">Scan → Share → Settled</span></div>
+      </div>
+    </section>
+
+    <div class="perf"></div>
+
+    <!-- INTERACTIVE DEMO -->
+    <section class="section reveal">
+      <p class="kicker">No. 002 — Try the flow</p>
+      <div class="demo-wrap">
+        <div class="tabs" role="tablist" aria-label="App flow">
+          <button class="tab" role="tab" data-screen="home" aria-selected="true">Home</button>
+          <button class="tab" role="tab" data-screen="scan">Scan</button>
+          <button class="tab" role="tab" data-screen="share">Share</button>
+          <button class="tab" role="tab" data-screen="claim">Claim</button>
+          <button class="tab" role="tab" data-screen="pay">Pay</button>
+          <button class="tab" role="tab" data-screen="settle">Settled</button>
+        </div>
+
+        <div class="phone" aria-live="polite">
+          <!-- HOME -->
+          <div class="screen" data-screen="home" data-active="true">
+            <div class="app-title">BiteSize</div>
+            <div class="app-muted" style="font-size:0.62rem;">Split it fair. Pay it easy.</div>
+            <div class="app-row" style="margin-top:0.3rem;">
+              <div class="app-card" style="flex:1; text-align:center;">📷<div style="margin-top:0.2rem; font-weight:700;">Take a photo</div></div>
+              <div class="app-card" style="flex:1; text-align:center;">🖼️<div style="margin-top:0.2rem; font-weight:700;">Upload a photo</div></div>
+            </div>
+            <div class="app-accent" style="text-align:center; font-size:0.68rem; margin-top:0.15rem;">or start with a blank bill</div>
+            <div class="app-muted" style="margin-top:0.5rem; font-size:0.6rem; font-weight:700;">RECENT BILLS</div>
+            <div class="app-card app-row"><span>🧾</span><div style="flex:1;"><div style="font-weight:700;">Friday Team Lunch</div><div class="app-muted" style="font-size:0.6rem;">Sate Kampar · July 12</div></div><b>₱1,240</b></div>
+            <div class="app-card app-row"><span>🧾</span><div style="flex:1;"><div style="font-weight:700;">Beach House Weekend</div><div class="app-muted" style="font-size:0.6rem;">Settled</div></div><span class="app-pill">Paid</span></div>
+          </div>
+
+          <!-- SCAN -->
+          <div class="screen" data-screen="scan">
+            <div class="app-row" style="justify-content:space-between;"><span class="app-title">New bill</span><span class="app-pill">By item</span></div>
+            <div class="app-card"><div class="app-muted" style="font-size:0.6rem;">Items 4 · Subtotal ₱980.00</div><div style="font-weight:800; font-size:1.05rem;">₱1,096.00</div></div>
+            <div class="app-card" style="border-color:#e3c98a;"><div style="font-weight:700; color:#a8752a;">Please review 1 item</div><div class="app-muted" style="font-size:0.6rem;">Scan wasn't fully confident — tap to check.</div></div>
+            <div class="app-card app-row"><div class="app-row" style="gap:0.3rem;"><span class="claim-box" style="border:none; background:#e4e9d5; color:#4a5c37; font-weight:800;">2</span></div><div style="flex:1;"><div style="font-weight:700;">Sizzling Sisig</div><div class="app-muted" style="font-size:0.6rem;">₱245.00 each</div></div><b>₱490.00</b></div>
+            <div class="app-card app-row"><div class="app-row" style="gap:0.3rem;"><span class="claim-box" style="border:none; background:#e4e9d5; color:#4a5c37; font-weight:800;">1</span></div><div style="flex:1;"><div style="font-weight:700;">Halo-Halo</div><div class="app-muted" style="font-size:0.6rem;">₱150.00 each</div></div><b>₱150.00</b></div>
+            <div class="app-sticky app-accent" style="font-size:0.65rem;">+ Add item · Paste items</div>
+          </div>
+
+          <!-- SHARE -->
+          <div class="screen" data-screen="share">
+            <div class="app-title">Share this bill</div>
+            <div class="app-card" style="text-align:center; padding:1rem;">
+              <div style="width:88px; height:88px; margin:0 auto; border-radius:0.6rem; background:repeating-conic-gradient(#241f16 0% 25%, #fffdf8 0% 50%) 0 0/14px 14px;"></div>
+              <div class="mono" style="margin-top:0.5rem; letter-spacing:0.1em; font-weight:700;">7F K2 9Q R4</div>
+              <div class="app-muted" style="font-size:0.6rem;">Scan or share the link — no account needed</div>
+            </div>
+            <div class="app-btn">Copy link</div>
+            <div class="app-muted" style="text-align:center; font-size:0.62rem;">3 of 5 people have joined</div>
+          </div>
+
+          <!-- CLAIM (interactive) -->
+          <div class="screen" data-screen="claim">
+            <div class="app-title">What did you have?</div>
+            <div class="claim-item on" data-price="245"><span class="claim-box">✓</span><div style="flex:1;">Sizzling Sisig<div class="app-muted" style="font-size:0.58rem;">₱245.00</div></div></div>
+            <div class="claim-item" data-price="150"><span class="claim-box"></span><div style="flex:1;">Halo-Halo<div class="app-muted" style="font-size:0.58rem;">₱150.00</div></div></div>
+            <div class="claim-item" data-price="120"><span class="claim-box"></span><div style="flex:1;">Iced Tea Pitcher<div class="app-muted" style="font-size:0.58rem;">₱120.00 · shared</div></div></div>
+            <div class="app-muted" style="text-align:center; font-size:0.58rem;">↑ tap an item — it's live</div>
+            <div class="app-sticky"><div class="app-muted" style="font-size:0.6rem;">You owe</div><div style="font-weight:800; font-size:1.3rem;" id="claimTotal">₱245.00</div></div>
+          </div>
+
+          <!-- PAY -->
+          <div class="screen" data-screen="pay">
+            <div class="app-title">Send payment via GCash</div>
+            <div class="app-card app-row" style="justify-content:space-between;"><b>0917 123 4567</b><span class="app-accent" style="font-weight:700; font-size:0.62rem;">Copy number</span></div>
+            <div class="app-card" style="text-align:center; border-style:dashed;"><span class="app-accent" style="font-weight:700;">Tap to reveal payment QR</span></div>
+            <div class="app-btn">I've Paid</div>
+            <div class="app-accent" style="text-align:center; font-size:0.62rem;">+ Add reference number, note, or partial amount</div>
+          </div>
+
+          <!-- SETTLE -->
+          <div class="screen" data-screen="settle">
+            <div class="app-card" style="text-align:center;">🎉<div style="font-weight:700;">All settled up!</div><div class="app-muted" style="font-size:0.6rem;">Everyone has paid — nothing left to collect.</div></div>
+            <div class="app-card"><div class="app-muted" style="font-size:0.6rem;">Total bill</div><div style="font-weight:800; font-size:1.2rem;">₱1,096.00</div></div>
+            <div class="app-row"><div class="app-avatar" style="background:#c97b5f;">JM</div><div style="flex:1;">Jam<div class="app-muted" style="font-size:0.58rem;">4 items</div></div><span class="app-pill">✓ Paid</span></div>
+            <div class="app-row"><div class="app-avatar" style="background:#6e8aa8;">RC</div><div style="flex:1;">Rico<div class="app-muted" style="font-size:0.58rem;">2 items</div></div><span class="app-pill">✓ Paid</span></div>
+            <div class="app-row"><div class="app-avatar" style="background:#a67b9e;">TY</div><div style="flex:1;">Tin<div class="app-muted" style="font-size:0.58rem;">3 items</div></div><span class="app-pill">✓ Paid</span></div>
+          </div>
+        </div>
+        <p class="caption">The claim screen is live — tap an item and watch the total change, same as the real app.</p>
+      </div>
+    </section>
+
+    <div class="perf"></div>
+
+    <!-- FEATURES AS ITEMIZED LINES -->
+    <section class="section reveal">
+      <p class="kicker">No. 003 — What's on the bill</p>
+
+      <div class="group">
+        <div class="gname"><span>Bill creation</span><span class="tag mono">AI-READ</span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Photo → itemized list</b> <span class="desc">— Gemini vision reads names, quantities, and prices straight off the receipt.</span></span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Paste from chat</b> <span class="desc">— drop a messy group-chat order list, it parses into items.</span></span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Tax, service, delivery, tip, discount</b> <span class="desc">— with one-tap 10/15/20% presets.</span></span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Auto-capitalized, auto-formatted</b> <span class="desc">— names and prices clean themselves up as you type.</span></span></div>
+      </div>
+
+      <div class="group">
+        <div class="gname"><span>Splitting &amp; claiming</span><span class="tag mono">FAIR SHARE</span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>By item, or split evenly</b> <span class="desc">— toggle per bill, remembered next time.</span></span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Shared items split automatically</b> <span class="desc">— one plate, three forks, three even shares.</span></span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Down to the centavo</b> <span class="desc">— rounding always reconciles to the receipt's real total.</span></span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Round to the nearest ₱1/5/10</b> <span class="desc">— optional, for easier cash change.</span></span></div>
+      </div>
+
+      <div class="group">
+        <div class="gname"><span>Payments</span><span class="tag mono">GET PAID</span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>GCash, cash, or other</b> <span class="desc">— with reference numbers and notes.</span></span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Partial payments</b> <span class="desc">— pay some now, see what's still owed.</span></span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>One-tap "mark paid"</b> <span class="desc">— for cash handed over in person.</span></span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Reminders that write themselves</b> <span class="desc">— pre-filled with the amount and GCash info.</span></span></div>
+      </div>
+
+      <div class="group">
+        <div class="gname"><span>The group</span><span class="tag mono">NO SIGN-UP</span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Join by QR or link</b> <span class="desc">— no account, no app install.</span></span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Add a guest who's not on the app</b> <span class="desc">— you manage their share for them.</span></span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Colored avatars, item counts</b> <span class="desc">— see who ordered what at a glance.</span></span></div>
+      </div>
+
+      <div class="group">
+        <div class="gname"><span>Built to actually work</span><span class="tag mono">RELIABLE</span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Keeps working with no signal</b> <span class="desc">— edits queue and sync when you're back online.</span></span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Undo, not "are you sure?"</b> <span class="desc">— deletes are instant and reversible for a few seconds.</span></span></div>
+        <div class="item-line"><span class="dot">·</span><span><b>Installable, live-updating</b> <span class="desc">— add to home screen; everyone's screen updates in real time.</span></span></div>
+      </div>
+
+      <div class="subtotal mono"><span>FEATURES ON THIS RECEIPT</span><span>60+</span></div>
+    </section>
+
+    <div class="perf"></div>
+
+    <!-- STACK -->
+    <section class="section reveal">
+      <p class="kicker">No. 004 — Ingredients</p>
+      <div class="stack-row mono">
+        <span class="stack-chip">Next.js (App Router)</span>
+        <span class="stack-chip">TypeScript</span>
+        <span class="stack-chip">Tailwind CSS v4</span>
+        <span class="stack-chip">Supabase (Postgres · Realtime · Storage)</span>
+        <span class="stack-chip">Google Gemini vision</span>
+        <span class="stack-chip">Vercel</span>
+      </div>
+      <p class="caption" style="margin-top:0.9rem; text-align:left; max-width:none;">Anonymous, device-token sessions instead of accounts — the bill is the login. Money is tracked in integer cents end to end so nobody's total is ever a fraction of a centavo off.</p>
+    </section>
+
+    <div class="perf"></div>
+
+    <!-- FOOTER / CTA -->
+    <section class="section reveal">
+      <div class="foot-total mono"><span>TOTAL VALUE</span><span>PRICELESS</span></div>
+      <div class="foot-sub mono">TENDERED: YOUR NEXT GROUP DINNER</div>
+
+      <div class="stamp-wrap" style="margin-top:1.6rem;">
+        <span class="stamp">Try it free</span>
+        <div class="cta-row" style="justify-content:center;">
+          <a class="btn btn-primary" href="https://bitesize-eosin.vercel.app" target="_blank" rel="noopener">Open BiteSize →</a>
+          <a class="btn btn-ghost" href="https://github.com/gianrufin/BiteSize" target="_blank" rel="noopener">Read the code</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="tear" aria-hidden="true"></div>
+  </div>
+
+  <p class="below">
+    Built by Claude · <a href="https://bitesize-eosin.vercel.app" target="_blank" rel="noopener">bitesize-eosin.vercel.app</a> ·
+    <a href="https://github.com/gianrufin/BiteSize" target="_blank" rel="noopener">github.com/gianrufin/BiteSize</a>
+  </p>
+</main>
+
+<script>
+  (function () {
+    "use strict";
+
+    // ---- theme toggle ----
+    var root = document.documentElement;
+    var btn = document.getElementById("themeBtn");
+    function systemPrefersDark() {
+      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    function currentIsDark() {
+      var explicit = root.getAttribute("data-theme");
+      if (explicit === "dark") return true;
+      if (explicit === "light") return false;
+      return systemPrefersDark();
+    }
+    function syncButton() {
+      btn.textContent = currentIsDark() ? "Light" : "Dark";
+    }
+    btn.addEventListener("click", function () {
+      root.setAttribute("data-theme", currentIsDark() ? "light" : "dark");
+      syncButton();
+    });
+    syncButton();
+
+    // ---- tabs / phone demo ----
+    var tabs = document.querySelectorAll(".tab");
+    var screens = document.querySelectorAll(".screen");
+    tabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        var target = tab.getAttribute("data-screen");
+        tabs.forEach(function (t) { t.setAttribute("aria-selected", String(t === tab)); });
+        screens.forEach(function (s) {
+          s.setAttribute("data-active", String(s.getAttribute("data-screen") === target));
+        });
+      });
+    });
+
+    // ---- interactive claim total ----
+    var claimItems = document.querySelectorAll(".claim-item");
+    var claimTotalEl = document.getElementById("claimTotal");
+    function recalcClaim() {
+      var total = 0;
+      claimItems.forEach(function (el) {
+        if (el.classList.contains("on")) total += Number(el.getAttribute("data-price")) || 0;
+      });
+      if (claimTotalEl) claimTotalEl.textContent = "₱" + total.toLocaleString("en-PH") + ".00";
+    }
+    claimItems.forEach(function (el) {
+      el.addEventListener("click", function () {
+        el.classList.toggle("on");
+        var box = el.querySelector(".claim-box");
+        box.textContent = el.classList.contains("on") ? "✓" : "";
+        recalcClaim();
+      });
+    });
+    recalcClaim();
+
+    // ---- running total ticker (scroll-driven) ----
+    var tickerEl = document.getElementById("tickerVal");
+    var lineItems = document.querySelectorAll(".item-line");
+    var perItem = 60;
+    var seen = new Set();
+    var tickerTotal = 0;
+    function renderTicker() {
+      tickerEl.textContent = "₱" + tickerTotal.toLocaleString("en-PH");
+    }
+    if ("IntersectionObserver" in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting && !seen.has(entry.target)) {
+            seen.add(entry.target);
+            tickerTotal += perItem;
+            renderTicker();
+          }
+        });
+      }, { threshold: 0.6 });
+      lineItems.forEach(function (el) { io.observe(el); });
+
+      var revealIo = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) entry.target.classList.add("in");
+        });
+      }, { threshold: 0.15 });
+      document.querySelectorAll(".reveal").forEach(function (el) { revealIo.observe(el); });
+    } else {
+      renderTicker();
+    }
+  })();
+</script>
+</body>
+</html>
