@@ -76,6 +76,9 @@ export function AppNav() {
           <NavLink href="/settings" icon={<GearIcon />} onNavigate={() => setOpen(false)}>
             Settings
           </NavLink>
+          <NavLink href="/support" icon={<CoffeeIcon />} onNavigate={() => setOpen(false)}>
+            Buy me a coffee
+          </NavLink>
         </nav>
       </div>
     </>
@@ -228,6 +231,25 @@ function ScaleIcon() {
     >
       <path d="M12 3v18M7 7l-4 8a4 4 0 0 0 8 0l-4-8ZM17 7l-4 8a4 4 0 0 0 8 0l-4-8Z" />
       <path d="M5 21h14" />
+    </svg>
+  );
+}
+
+function CoffeeIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+      <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4Z" />
+      <path d="M6 2v2M10 2v2M14 2v2" />
     </svg>
   );
 }

@@ -255,6 +255,9 @@ export function SummaryView({
           <p className="mt-1 text-sm text-muted">
             Everyone has paid — nothing left to collect.
           </p>
+          <a href="/support" className="mt-2 inline-block text-sm font-medium text-accent">
+            ☕ Enjoying BiteSize? Buy me a coffee
+          </a>
         </div>
       ) : null}
       <div className="card p-5 text-center">
