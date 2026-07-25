@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.11.0",
+    "@next/third-parties": "^16.2.10",
     "@supabase/supabase-js": "^2.110.5",
     "jsqr": "^1.4.0",
     "nanoid": "^6.0.0",
